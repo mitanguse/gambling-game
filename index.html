@@ -417,7 +417,7 @@ function doWork(pay) {
     Player.workCount++;
     saveGame();
     updateStatus();
-    log('💼 赚了 $' + pay, 'win');
+    addDignity(1); log('💼 赚了 $' + pay + ' 尊严+1', 'win');
     showWork();
 }
 
@@ -510,7 +510,7 @@ function rollDice() {
     if (sum === guess) {
         const win = bet * DICE_ODDS[sum];
         addCash(win);
-        log('🎲 中了 $' + win + '！', 'win');
+        addDignity(1); log('🎲 中了 $' + win + '！ 尊严+1', 'win');
     } else {
         addCash(-bet);
         log('🎲 输了 $' + bet, 'lose');
@@ -543,7 +543,7 @@ function buyScratch() {
     else { m = '😢 没中'; }
     addCash(p);
     $('scratchResult').textContent = p > 0 ? '🎉 $' + p : '💔 没中';
-    log(m, p > 0 ? 'win' : 'lose');
+    if(p>0){addDignity(1);log(m+' 尊严+1','win')}else log(m,'lose');
 }
 
 // ============================================================
@@ -579,7 +579,7 @@ function playPinball() {
     if (re.p > 0) {
         addCash(re.p);
         $('pinballResult').textContent = re.n;
-        log('🕹 ' + re.n + ' $' + re.p, 'win');
+        addDignity(1); log('🕹 ' + re.n + ' $' + re.p + ' 尊严+1', 'win');
     } else {
         $('pinballResult').textContent = '💨 没中';
         log('🕹 空洞', 'lose');
@@ -841,7 +841,7 @@ function pokerProceed() {
             if (rm.length<=1) {
                 s.ro=true; Player.cash+=s.ch[0];
                 let rk=Math.floor(s.pot*0.1); s.pot-=rk;
-                if (rm[0]===0) { Player.cash+=s.pot; log('你赢了$'+s.pot,'win'); }
+                if (rm[0]===0) { Player.cash+=s.pot; addDignity(2); log('你赢了$'+s.pot+' 尊严+2','win'); }
                 else { s.ch[rm[0]]+=s.pot; log(AI_NAMES[rm[0]-1]+'赢了$'+s.pot,'lose'); }
                 saveGame(); updateStatus(); renderPoker(); return;
             }
@@ -922,7 +922,7 @@ function soccerBet(tp) {
     if (win===tp) {
         let w = amt*odds[tp];
         addCash(w+amt);
-        log('⚽ 赢了！$'+(w+amt),'win');
+        addDignity(2); log('⚽ 赢了！$'+(w+amt)+' 尊严+2','win');
     } else {
         log('⚽ 输了 $'+amt,'lose');
     }
@@ -971,7 +971,7 @@ function horseBet() {
     if (win2===pick) {
         let w2 = Math.floor(amt*g.hs[pick].od);
         addCash(w2+amt);
-        log('🐎 赢了 $'+w2+'！'+ordr,'win');
+        addDignity(3); log('🐎 赢了 $'+w2+'！'+ordr+' 尊严+3','win');
         $('hR').innerHTML = '<p style="color:#4ecca3;">🏆 '+g.hs[win2].n+'夺冠！$'+w2+'</p>';
     } else {
         log('🐎 输了 $'+amt,'lose');
