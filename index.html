@@ -421,9 +421,16 @@ function doWork(pay) {
     showWork();
 }
 
+function tickAllFutures() {
+    FUTURES.forEach(function(f) {
+        let change = f.price * f.vol * (Math.random()-0.5) * 2;
+        f.price = Math.max(1, f.price + change);
+    });
+}
 function passDay() {
     Player.day++;
     Player.workCount = 0;
+    tickAllFutures();
     if (Player.loanActive) {
         Player.loanDays++;
         const owed = Math.floor(Player.loanAmount * Math.pow(1.05, Player.loanDays));
@@ -698,7 +705,7 @@ function showFutures() {
         h += '<p>持仓：'+f.name+' '+(futuresPositions.dir==="long" ? "📈做多" : "📉做空");
         h += '<br>开仓价 $'+futuresPositions.openPrice+' | 当前价 $'+Math.floor(f.price);
         h += '<br>盈亏 <span style="color:'+(pnl>=0?"#4ecca3":"#e94560")+'">$'+Math.floor(pnl)+'</span></p>';
-        h += '<button class="btn btn-win" onclick="closeFutures()">平仓</button> <button class="btn" onclick="tickFutures()">⏭ 等待</button></div>';
+        h += '<button class="btn btn-win" onclick="closeFutures()">平仓</button> <button class="btn btn-warn" onclick="passDayFromFutures()">⏭ 过一天</button></div>';
     }
     h += '<button class="btn" onclick="showMenu()" style="margin-top:10px;">← 返回</button>';
     $("gameArea").innerHTML = h;
@@ -709,6 +716,26 @@ function openFutures() {
     addCash(-amt);
     futuresPositions = {idx:idx, dir:dir, amount:amt, openPrice:FUTURES[idx].price};
     log("📈 开仓 "+FUTURES[idx].name+" "+(dir==="long"?"多":"空")+" $"+amt,"info");
+    showFutures();
+}
+function passDayFromFutures() {
+    tickAllFutures();
+    Player.day++;
+    Player.workCount = 0;
+    if (Player.loanActive) {
+        Player.loanDays++;
+        let owed = Math.floor(Player.loanAmount * Math.pow(1.05, Player.loanDays));
+        Player.debt = owed;
+        if (Player.loanDays > Player.loanMaxDays) {
+            log("💀 逾期！债主上门！", "lose");
+        } else {
+            log("⏭ 第 " + Player.day + " 天，债务滚到 $" + owed + "，期货价格已更新", "info");
+        }
+    } else {
+        log("⏭ 第 " + Player.day + " 天，期货价格已更新", "info");
+    }
+    saveGame();
+    updateStatus();
     showFutures();
 }
 function closeFutures() {
@@ -725,10 +752,7 @@ function closeFutures() {
 }
 function tickFutures() {
     if (!futuresPositions) return;
-    let f = FUTURES[futuresPositions.idx];
-    let change = f.price * f.vol * (Math.random()-0.5) * 2;
-    f.price = Math.max(1, f.price + change);
-    log("📉 "+f.name+" 价格 $"+Math.floor(f.price),"info");
+    log("⏭ 过一天所有期货价格都会波动，先去主菜单点"过一天"！","info");
     showFutures();
 }
 // 12. 德州扑克
