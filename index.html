@@ -673,6 +673,64 @@ function repayLoan() {
 })();
 
 // ============================================================
+
+// 13. 炒期货
+// ============================================================
+const FUTURES = [
+    {name:'原油', price:75, vol:0.08},
+    {name:'黄金', price:1950, vol:0.03},
+    {name:'比特币', price:62000, vol:0.12},
+    {name:'大豆', price:1200, vol:0.05}
+];
+let futuresPositions = null;
+function showFutures() {
+    let h = '<h2>📈 炒期货</h2><p>选择品种和方向，价格实时波动！</p><div style="font-size:13px;">';
+    FUTURES.forEach(function(f,i){ h += '<p><b>'+f.name+'</b> $'+f.price+' 波动率'+(f.vol*100)+'%</p>'; });
+    h += '</div><p>品种 <select id="fSel">';
+    FUTURES.forEach(function(f,i){ h += '<option value="'+i+'">'+f.name+'</option>'; });
+    h += '</select><br>方向 <select id="fDir"><option value="long">做多</option><option value="short">做空</option></select>';
+    h += '<br>投入 $<input type="number" id="fAmt" value="1000" min="100"><br>';
+    h += '<button class="btn btn-lose" onclick="openFutures()">📈 开仓</button></p><div id="fPos"></div>';
+    if (futuresPositions) {
+        let f = FUTURES[futuresPositions.idx];
+        let pnl = futuresPositions.dir === "long" ? (f.price-futuresPositions.openPrice)/futuresPositions.openPrice*futuresPositions.amount : (futuresPositions.openPrice-f.price)/futuresPositions.openPrice*futuresPositions.amount;
+        h += '<div style="margin-top:10px;padding:10px;background:#0a0a05;border-radius:8px;border:1px solid #3d2a00;">';
+        h += '<p>持仓：'+f.name+' '+(futuresPositions.dir==="long" ? "📈做多" : "📉做空");
+        h += '<br>开仓价 $'+futuresPositions.openPrice+' | 当前价 $'+Math.floor(f.price);
+        h += '<br>盈亏 <span style="color:'+(pnl>=0?"#4ecca3":"#e94560")+'">$'+Math.floor(pnl)+'</span></p>';
+        h += '<button class="btn btn-win" onclick="closeFutures()">平仓</button> <button class="btn" onclick="tickFutures()">⏭ 等待</button></div>';
+    }
+    h += '<button class="btn" onclick="showMenu()" style="margin-top:10px;">← 返回</button>';
+    $("gameArea").innerHTML = h;
+}
+function openFutures() {
+    let idx = parseInt($("fSel").value), dir = $("fDir").value, amt = parseInt($("fAmt").value);
+    if (!amt || amt<100 || amt>Player.cash) { log("金额无效","lose"); return; }
+    addCash(-amt);
+    futuresPositions = {idx:idx, dir:dir, amount:amt, openPrice:FUTURES[idx].price};
+    log("📈 开仓 "+FUTURES[idx].name+" "+(dir==="long"?"多":"空")+" $"+amt,"info");
+    showFutures();
+}
+function closeFutures() {
+    if (!futuresPositions) return;
+    let f = FUTURES[futuresPositions.idx];
+    let pnl = futuresPositions.dir==="long" ? (f.price-futuresPositions.openPrice)/futuresPositions.openPrice*futuresPositions.amount : (futuresPositions.openPrice-f.price)/futuresPositions.openPrice*futuresPositions.amount;
+    let fee = Math.floor(Math.abs(pnl)*0.05);
+    let total = Math.floor(futuresPositions.amount + pnl - fee);
+    if (total<0) total=0;
+    addCash(total);
+    if(pnl>0){addDignity(3);log("📊 平仓 盈利 $"+Math.floor(pnl)+" 手续费$"+fee+" 尊严+3","win")}else{log("📊 平仓 亏损 $"+Math.floor(-pnl)+" 手续费$"+fee,"lose")}
+    futuresPositions = null;
+    showFutures();
+}
+function tickFutures() {
+    if (!futuresPositions) return;
+    let f = FUTURES[futuresPositions.idx];
+    let change = f.price * f.vol * (Math.random()-0.5) * 2;
+    f.price = Math.max(1, f.price + change);
+    log("📉 "+f.name+" 价格 $"+Math.floor(f.price),"info");
+    showFutures();
+}
 // 12. 德州扑克
 // ============================================================
 
