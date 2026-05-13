@@ -293,6 +293,7 @@ $('gameArea').innerHTML='<h2>德州扑克</h2><div style="background:#0a0a1a;bor
 
 function startPoker(bl){
 if(player.cash<bl*10){log('需要$'+(bl*10),'lose');return;}
+player.cash-=bl*10;
 ps={blind:bl,deck:newDeck(),ph:[],ah:[],com:[],pot:0,stage:'p',pb:0,ab:[0,0,0],cb:0,fd:[false,false,false,false],ch:[bl*10,bl*10,bl*10,bl*10],acts:[],ro:false};
 var sb=Math.floor(bl/2);ps.ch[1]-=sb;ps.ch[2]-=bl;ps.ab[1]=sb;ps.ab[2]=bl;ps.cb=bl;ps.pot=sb+bl;
 ps.ph=[ps.deck.pop(),ps.deck.pop()];
@@ -337,7 +338,7 @@ a.innerHTML=h;
 function pa(ac){
 var s=ps;if(s.ro)return;var tc=s.cb-s.pb;
 switch(ac){
-case'f':s.fd[0]=true;s.acts.push('你弃牌');s.ro=true;renderPoker();log('弃牌','lose');return;
+case'f':s.fd[0]=true;player.cash+=s.ch[0];s.acts.push('你弃牌');s.ro=true;renderPoker();log('弃牌','lose');return;
 case'k':s.acts.push('你过牌');break;
 case'c':if(tc>s.ch[0]){log('筹码不够','lose');return;}s.ch[0]-=tc;s.pb+=tc;s.pot+=tc;s.acts.push('你跟注$'+tc);break;
 case'r':var ra=parseInt($('rA').value);if(!ra||ra<=tc||ra>s.ch[0]){log('无效','lose');return;}s.ch[0]-=ra;s.pb+=ra;s.pot+=ra;s.cb=s.pb;s.acts.push('你加注到$'+s.pb);break;
@@ -361,7 +362,7 @@ case'r':var ra2=Math.min(dc.am,s.ch[i]);if(ra2<=s.cb-s.ab[i]){var ca2=Math.min(s
 s.ch[i]-=ra2;s.ab[i]+=ra2;s.pot+=ra2;s.cb=Math.max(s.cb,s.ab[i]);s.acts.push(AI_NAMES[i-1]+'加注到$'+s.ab[i]);break;
 }
 var rm=[0,1,2,3].filter(function(j){return!s.fd[j]&&s.ch[j]>0});
-if(rm.length<=1){s.ro=true;if(rm[0]===0){player.cash+=s.pot;s.acts.push('你赢了$'+s.pot);}else{s.ch[rm[0]]+=s.pot;s.acts.push(AI_NAMES[rm[0]-1]+'赢了$'+s.pot);}updateUI();renderPoker();log(s.acts[s.acts.length-1],rm[0]===0?'win':'lose');return;}
+if(rm.length<=1){s.ro=true;player.cash+=s.ch[0];if(rm[0]===0){player.cash+=s.pot;s.acts.push('你赢了$'+s.pot);}else{s.ch[rm[0]]+=s.pot;s.acts.push(AI_NAMES[rm[0]-1]+'赢了$'+s.pot);}updateUI();renderPoker();log(s.acts[s.acts.length-1],rm[0]===0?'win':'lose');return;}
 }
 var ap=[0,1,2,3].filter(function(j){return!s.fd[j]&&s.ch[j]>0});
 var asb=ap.every(function(j){return(j===0?s.pb:s.ab[j])===s.cb});
@@ -385,6 +386,7 @@ s.pb=0;s.ab=[0,0,0];s.cb=0;renderPoker();setTimeout(function(){proceed();},200);
 
 function showdown(){
 var s=ps;s.ro=true;
+player.cash+=s.ch[0];
 var ap=[0,1,2,3].filter(function(j){return!s.fd[j]&&s.ch[j]>0});
 var bs=-1,wn=[],bn='';
 ap.forEach(function(j){
