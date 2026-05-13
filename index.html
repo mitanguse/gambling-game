@@ -460,7 +460,7 @@ function passDay() {
     tickAllPrices();
     if (Player.loanActive) {
         Player.loanDays++;
-        const owed = Math.floor(Player.loanAmount * Math.pow(1.05, Player.loanDays));
+        const owed = Math.floor(Player.loanAmount * 1.4);
         Player.debt = owed;
         if (Player.loanDays > Player.loanMaxDays) {
             log('💀 逾期' + (Player.loanDays - Player.loanMaxDays) + '天！债主上门！', 'lose');
@@ -653,12 +653,12 @@ const LOANS = [
 function showLoan() {
     let h = '<h2>💰 高利贷</h2>';
     if (Player.loanActive) {
-        const owed = Math.floor(Player.loanAmount * Math.pow(1.05, Player.loanDays));
-        h += '<p style="color:#e94560;">欠款 $' + owed + ' (' + Player.loanDays + '/' + Player.loanMaxDays + '天)</p>';
-        h += '<button class="btn btn-lose" onclick="repayLoan()">💸 还清 $' + owed + '</button> ';
+        const owed = Math.floor(Player.loanAmount * 1.4);
+        h += '<p style="color:#e94560;">欠款 $' + owed + '（期限' + Player.loanMaxDays + '天）</p>';
+        h += '<button class="btn btn-lose" onclick="repayLoan()">💸 还清十四归 $' + owed + '</button> ';
         h += '<button class="btn" onclick="passDay()">⏭ 过一天</button>';
     } else {
-        h += '<table class="loan-table"><tr><th>级别</th><th>额度</th><th>日息</th><th>期限</th></tr>';
+        h += '<table class="loan-table"><tr><th>级别</th><th>借</th><th>实到手</th><th>5天后还</th></tr>';
         LOANS.forEach(function(l) {
             h += '<tr><td>' + l.level + '</td><td>$' + l.a + '</td><td>' + (l.r * 100) + '%</td><td>' + l.md + '天</td></tr>';
         });
@@ -686,7 +686,7 @@ function takeLoan(i) {
 }
 
 function repayLoan() {
-    const owed = Math.floor(Player.loanAmount * Math.pow(1.05, Player.loanDays));
+    const owed = Math.floor(Player.loanAmount * 1.4);
     if (Player.cash < owed) { log('不够钱', 'lose'); return; }
     Player.cash -= owed;
     Player.loanActive = false;
