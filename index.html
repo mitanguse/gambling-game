@@ -463,7 +463,7 @@ function passDay() {
         const owed = Math.floor(Player.loanAmount * Math.pow(1.05, Player.loanDays));
         Player.debt = owed;
         if (Player.loanDays > Player.loanMaxDays) {
-            log('💀 逾期！债主上门！', 'lose');
+            log('💀 逾期' + (Player.loanDays - Player.loanMaxDays) + '天！债主上门！', 'lose');
         } else {
             log('⏭ 第 ' + Player.day + ' 天，债务滚到 $' + owed, 'lose');
         }
@@ -471,7 +471,7 @@ function passDay() {
         log('⏭ 第 ' + Player.day + ' 天，平安无事', 'info');
     }
     // 债务逾期惩罚
-    if (Player.loanActive && Player.loanDays > Player.loanMaxDays) {
+    if (Player.loanActive && Player.loanDays > Player.loanMaxDays + 5) {
         if (Player.cash >= Player.debt) {
             // 现金够还债 → 债主抢光所有现金
             log('🔥 债主上门！抢光了所有现金 $' + Player.cash + '！', 'lose');
