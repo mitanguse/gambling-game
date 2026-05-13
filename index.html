@@ -362,7 +362,7 @@ case'r':var ra2=Math.min(dc.am,s.ch[i]);if(ra2<=s.cb-s.ab[i]){var ca2=Math.min(s
 s.ch[i]-=ra2;s.ab[i]+=ra2;s.pot+=ra2;s.cb=Math.max(s.cb,s.ab[i]);s.acts.push(AI_NAMES[i-1]+'加注�?'+s.ab[i]);break;
 }
 var rm=[0,1,2,3].filter(function(j){return!s.fd[j]&&s.ch[j]>0});
-if(rm.length<=1){s.ro=true;player.cash+=s.ch[0];if(rm[0]===0){player.cash+=s.pot;s.acts.push('你赢�?'+s.pot);}else{s.ch[rm[0]]+=s.pot;s.acts.push(AI_NAMES[rm[0]-1]+'赢了$'+s.pot);}updateUI();renderPoker();log(s.acts[s.acts.length-1],rm[0]===0?'win':'lose');return;}
+if(rm.length<=1){s.ro=true;player.cash+=s.ch[0];var rake2=Math.floor(s.pot*0.1);s.pot-=rake2;log("ׯ�ҳ�ˮ$"+rake2,"info");if(rm[0]===0){player.cash+=s.pot;s.acts.push('你赢�?'+s.pot);}else{s.ch[rm[0]]+=s.pot;s.acts.push(AI_NAMES[rm[0]-1]+'赢了$'+s.pot);}updateUI();renderPoker();log(s.acts[s.acts.length-1],rm[0]===0?'win':'lose');return;}
 }
 var ap=[0,1,2,3].filter(function(j){return!s.fd[j]&&s.ch[j]>0});
 var asb=ap.every(function(j){return(j===0?s.pb:s.ab[j])===s.cb});
@@ -393,7 +393,7 @@ ap.forEach(function(j){
 var ca=j===0?s.ph:s.ah[j-1];var al=[...ca,...s.com];var r2=evalHand(al);var sc=r2.rank*100+r2.high;
 if(sc>bs){bs=sc;wn=[j];bn=r2.name;}else if(sc===bs){wn.push(j);}
 });
-var wa=Math.floor(s.pot/wn.length);
+var rake=Math.floor(s.pot*0.1);s.pot-=rake;var wa=Math.floor(s.pot/wn.length);
 wn.forEach(function(j){if(j===0)player.cash+=wa;else s.ch[j]+=wa;});
 var msg='';
 if(wn.length===1&&wn[0]===0)msg='你赢了！'+HAND_NAMES[bn]+'�?'+wa;
