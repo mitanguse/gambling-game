@@ -1,141 +1,137 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <title>赌博模拟器</title>
-    <style>
-    *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:Arial,'Microsoft YaHei',sans-serif;background:#1a1a2e;color:#eee;max-width:500px;margin:0 auto;padding:10px}
-    .bar{background:#16213e;border-radius:10px;padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;border:1px solid #0f3460}
-    .s{text-align:center;font-size:14px}
-    .s .l{color:#888;font-size:11px}
-    .s .v{font-weight:bold;font-size:18px}
-    .s .c{color:#4ecca3}
-    .s .d{color:#e94560}
-    .s .g{color:#f5a623}
-    .ga{background:#16213e;border-radius:10px;padding:15px;margin-bottom:12px;border:1px solid #0f3460;min-height:200px}
-    h2{font-size:16px;color:#4ecca3;margin-bottom:10px;text-align:center}
-    p{font-size:13px;color:#ccc;margin-bottom:8px;line-height:1.5}
-    .btn{background:#0f3460;color:#eee;border:none;padding:10px 18px;border-radius:8px;font-size:14px;cursor:pointer;margin:4px}
-    .btn:hover{background:#1a5276}
-    .btn.g{background:#4ecca3;color:#1a1a2e}
-    .btn.o{background:#f5a623;color:#1a1a2e}
-    .btn.r{background:#e94560}
-    .btn.s{padding:6px 12px;font-size:12px}
-    .mg{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
-    .mb{background:#0f3460;border:1px solid #1a5276;border-radius:8px;padding:14px 8px;text-align:center;cursor:pointer;font-size:13px}
-    .mb:hover{background:#1a5276}
-    .mb .i{font-size:24px;display:block;margin-bottom:4px}
-    .mb.l{opacity:0.4;cursor:not-allowed}
-    .mb.l:after{content:" locked";font-size:10px}
-    .lg{background:#0a0a1a;border-radius:6px;padding:10px;margin-top:10px;max-height:150px;overflow-y:auto;font-size:12px;color:#aaa;line-height:1.6}
-    .w{color:#4ecca3}.l{color:#e94560}.i{color:#f5a623}
-    .da{display:flex;justify-content:center;gap:20px;margin:15px 0}
-    .dd{width:60px;height:60px;background:#fff;color:#1a1a2e;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:bold}
-    .lt{width:100%;border-collapse:collapse;font-size:12px;margin:8px 0}
-    .lt th,.lt td{border:1px solid #333;padding:6px;text-align:center}
-    .lt th{background:#0f3460}
-    input,select{background:#0a0a1a;border:1px solid #333;color:#eee;padding:8px;border-radius:6px;width:100px;font-size:13px}
-    select{width:auto}
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>赌博模拟器</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Microsoft YaHei',sans-serif;background:#0a0a12;color:#e0d5c0;max-width:500px;margin:0 auto;padding:10px;min-height:100vh}
+/* 霓虹边框 */
+.bar{background:linear-gradient(135deg,#1a0a00,#2d1300);border:1px solid #d4a04a;border-radius:12px;padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;box-shadow:0 0 15px rgba(212,160,74,0.15)}
+.s{text-align:center}
+.s .l{color:#a08050;font-size:11px}
+.s .v{font-weight:bold;font-size:18px;color:#e0d5c0}
+.s .c{color:#4ecca3;text-shadow:0 0 8px rgba(78,204,163,0.4)}
+.s .d{color:#e94560;text-shadow:0 0 8px rgba(233,69,96,0.4)}
+.s .g{color:#f5a623;text-shadow:0 0 8px rgba(245,166,35,0.4)}
+.ga{background:linear-gradient(135deg,#1a0a00,#2d1300);border:1px solid #d4a04a;border-radius:12px;padding:15px;margin-bottom:12px;min-height:200px;box-shadow:0 0 15px rgba(212,160,74,0.1)}
+h2{font-size:16px;color:#f5d68e;margin-bottom:10px;text-align:center;text-shadow:0 0 10px rgba(245,214,142,0.3)}
+p{font-size:13px;color:#c0b090;margin-bottom:8px;line-height:1.5}
+.btn{background:linear-gradient(135deg,#2a1a00,#3d2a00);color:#f5d68e;border:1px solid #d4a04a;padding:10px 18px;border-radius:8px;font-size:14px;cursor:pointer;margin:4px;transition:all 0.2s;text-shadow:0 1px 2px rgba(0,0,0,0.5)}
+.btn:hover{background:linear-gradient(135deg,#3d2a00,#5a3a00);border-color:#f5d68e;transform:translateY(-1px);box-shadow:0 4px 12px rgba(212,160,74,0.3)}
+.btn:active{transform:scale(0.96)}
+.btn.g{background:linear-gradient(135deg,#1a5a3a,#2a8a5a);border-color:#4ecca3;color:#4ecca3}
+.btn.g:hover{box-shadow:0 4px 12px rgba(78,204,163,0.3)}
+.btn.o{background:linear-gradient(135deg,#5a3a00,#8a5a00);border-color:#f5a623;color:#f5a623}
+.btn.o:hover{box-shadow:0 4px 12px rgba(245,166,35,0.3)}
+.btn.r{background:linear-gradient(135deg,#5a1a1a,#8a2a2a);border-color:#e94560;color:#e94560}
+.btn.r:hover{box-shadow:0 4px 12px rgba(233,69,96,0.3)}
+.btn.s{padding:6px 12px;font-size:12px}
+.mg{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.mb{background:linear-gradient(135deg,#1a0a00,#2d1300);border:1px solid #d4a04a;border-radius:10px;padding:14px 8px;text-align:center;cursor:pointer;font-size:13px;transition:all 0.2s}
+.mb:hover{background:linear-gradient(135deg,#2d1300,#4a2000);border-color:#f5d68e;transform:translateY(-2px);box-shadow:0 4px 15px rgba(212,160,74,0.3)}
+.mb .i{font-size:24px;display:block;margin-bottom:4px}
+.mb.l{opacity:0.5;cursor:not-allowed}
+.mb.l:after{content:" locked";font-size:10px;color:#a08050}
+.lg{background:#0a0a05;border:1px solid #3d2a00;border-radius:8px;padding:10px;margin-top:10px;max-height:150px;overflow-y:auto;font-size:12px;color:#8a7050;line-height:1.6}
+.w{color:#4ecca3}.l{color:#e94560}.i{color:#f5a623}
+.da{display:flex;justify-content:center;gap:20px;margin:15px 0}
+.dd{width:60px;height:60px;background:linear-gradient(135deg,#fff,#f0e0c0);color:#1a1a2e;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:bold;box-shadow:0 4px 10px rgba(0,0,0,0.3)}
+.lt{width:100%;border-collapse:collapse;font-size:12px;margin:8px 0}
+.lt th,.lt td{border:1px solid #3d2a00;padding:6px;text-align:center}
+.lt th{background:#1a0a00;color:#f5d68e}
+input,select{background:#0a0a05;border:1px solid #5a3a00;color:#e0d5c0;padding:8px;border-radius:8px;width:100px;font-size:13px}
+select{width:auto}
+/* 赢钱闪光动画 */
+@keyframes flash{0%{text-shadow:0 0 10px #4ecca3}50%{text-shadow:0 0 30px #4ecca3,0 0 60px #4ecca3}100%{text-shadow:0 0 10px #4ecca3}}
+.flash{animation:flash 0.6s ease 3}
+</style>
 </head>
 <body>
 <div class="bar"><div class="s"><div class="l">现金</div><div class="v c" id="c1">$50</div></div><div class="s"><div class="l">尊严</div><div class="v g" id="c2">100</div></div><div class="s"><div class="l">债务</div><div class="v d" id="c3">$0</div></div><div class="s"><div class="l">天数</div><div class="v" id="c4">1</div></div></div>
-<div class="ga" id="ga"><div id="mm"><h2>赌博模拟器</h2><p>从身无分文开始，靠运气和胆量逆天改命。</p><div class="mg" id="mg"></div></div></div>
+<div class="ga" id="ga"><div id="mm"><h2>🎰 赌博模拟器</h2><p>从身无分文开始，靠运气和胆量逆天改命。</p><div class="mg" id="mg"></div></div></div>
 <div class="lg" id="lg"></div>
 <script>
+// 音效系统
+var AC=null;
+function initAudio(){if(!AC)AC=new(window.AudioContext||window.webkitAudioContext)()}
+function playTone(freq,dur,type){
+ try{
+  initAudio();
+  var o=AC.createOscillator(),g=AC.createGain();
+  o.type=type||'sine';o.frequency.value=freq;g.gain.value=0.1;
+  g.gain.exponentialRampToValueAtTime(0.001,AC.currentTime+dur);
+  o.connect(g);g.connect(AC.destination);o.start();o.stop(AC.currentTime+dur);
+ }catch(e){}
+}
+function sWin(){playTone(800,0.1,'sine');setTimeout(function(){playTone(1200,0.15,'sine')},100)}
+function sLose(){playTone(300,0.2,'sawtooth')}
+function sClick(){playTone(1000,0.05,'square')}
+function sCoin(){playTone(1500,0.08,'sine');setTimeout(function(){playTone(2000,0.08,'sine')},60)}
+function sDice(){for(var i=0;i<3;i++)setTimeout(function(){playTone(200+Math.random()*400,0.05,'square')},i*50)}
+
 var P={cash:50,dignity:100,debt:0,loan:false,loanA:0,loanD:0,loanM:0,workN:0,day:1};
-var MW=5,J=[
-{name:'便利店收银',p:10},{name:'洗碗工',p:15},{name:'搬砖',p:25},{name:'清洁工',p:12}
-],L=[
-{level:'小额',a:500,r:0.05,md:7},{level:'中额',a:2000,r:0.08,md:14},{level:'大额',a:5000,r:0.12,md:30}
-],DO={
-2:{m:30},3:{m:15},4:{m:10},5:{m:7},6:{m:6},7:{m:5},8:{m:6},9:{m:7},10:{m:10},11:{m:15},12:{m:30}
-},G=[
-{id:'dice',name:'赌大小',icon:'d',c:0,di:0},{id:'scratch',name:'刮刮乐',icon:'e',c:0,di:0},{id:'pinball',name:'弹珠机',icon:'f',c:0,di:0},
-{id:'work',name:'打工',icon:'g',c:0,di:0},{id:'beg',name:'乞讨',icon:'h',c:0,di:0},{id:'loan',name:'借钱',icon:'i',c:0,di:0},
-{id:'poker',name:'德州扑克',icon:'j',c:500,di:30},{id:'soccer',name:'赌球',icon:'k',c:2000,di:40},{id:'horse',name:'赌马',icon:'l',c:2000,di:40},
-{id:'futures',name:'炒期货',icon:'m',c:10000,di:50}
-];
-var ICONS={d:'🎲',e:'🎫',f:'🕹',g:'💼',h:'🪱',i:'💰',j:'🃏',k:'⚽',l:'🐎',m:'📈'};
-var SUITS=['S','H','D','C'],RN=['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
-var AN=['老狐狸','小白兔','秃鹫'],AL=['高手','菜鸡','普通'],HN={RF:'皇家同花顺',SF:'同花顺','4ok':'四条',FH:'葫芦',FL:'同花',ST:'顺子',TK:'三条','2P':'两对','1P':'一对',HC:'高牌'};
-var TEAMS=[{n:'成都蓉城',s:85},{n:'上海海港',s:90},{n:'北京国安',s:80},{n:'山东泰山',s:75},{n:'广州恒大',s:70},{n:'深圳鹏城',s:65},{n:'武汉三镇',s:60},{n:'天津津门虎',s:55}];
+var MW=5,J=[{name:'便利店收银',p:10},{name:'洗碗工',p:15},{name:'搬砖',p:25},{name:'清洁工',p:12}];
+var L=[{level:'小额',a:500,r:0.05,md:7},{level:'中额',a:2000,r:0.08,md:14},{level:'大额',a:5000,r:0.12,md:30}];
+var DO={2:{m:30},3:{m:15},4:{m:10},5:{m:7},6:{m:6},7:{m:5},8:{m:6},9:{m:7},10:{m:10},11:{m:15},12:{m:30}};
+var G=[{id:'dice',name:'赌大小',icon:'d',c:0,di:0},{id:'scratch',name:'刮刮乐',icon:'e',c:0,di:0},{id:'pinball',name:'弹珠机',icon:'f',c:0,di:0},{id:'work',name:'打工',icon:'g',c:0,di:0},{id:'beg',name:'乞讨',icon:'h',c:0,di:0},{id:'loan',name:'借钱',icon:'i',c:0,di:0},{id:'poker',name:'德州扑克',icon:'j',c:500,di:30},{id:'soccer',name:'赌球',icon:'k',c:2000,di:40},{id:'horse',name:'赌马',icon:'l',c:2000,di:40},{id:'futures',name:'炒期货',icon:'m',c:10000,di:50}];
+var IC={d:'🎲',e:'🎫',f:'🕹',g:'💼',h:'🪱',i:'💰',j:'🃏',k:'⚽',l:'🐎',m:'📈'};
+var SU=['S','H','D','C'],RN=['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+var AN=['老狐狸','小白兔','秃鹫'],AL=['高手','菜鸡','普通'];
+var HN={RF:'皇家同花顺',SF:'同花顺','4ok':'四条',FH:'葫芦',FL:'同花',ST:'顺子',TK:'三条','2P':'两对','1P':'一对',HC:'高牌'};
+var TM=[{n:'成都蓉城',s:85},{n:'上海海港',s:90},{n:'北京国安',s:80},{n:'山东泰山',s:75},{n:'广州恒大',s:70},{n:'深圳鹏城',s:65},{n:'武汉三镇',s:60},{n:'天津津门虎',s:55}];
 var HN2=['赤兔','闪电','追风','踏雪'];
 var SG={},HR={},ps={};
-
 function $(x){return document.getElementById(x)}
-function u(){
-$('c1').textContent='$'+P.cash;$('c2').textContent=P.dignity;$('c3').textContent=P.debt>0?'$'+P.debt:'$0';$('c4').textContent=P.day;
-}
+function u(){$('c1').textContent='$'+P.cash;$('c2').textContent=P.dignity;$('c3').textContent=P.debt>0?'$'+P.debt:'$0';$('c4').textContent=P.day}
 function og(m,t){var a=$('lg'),d=document.createElement('div');d.className=t||'i';d.textContent='> '+m;a.appendChild(d);a.scrollTop=a.scrollHeight}
 function sm(){
-$('ga').innerHTML='<h2>赌博模拟器</h2><p>现金: $'+P.cash+' | 尊严: '+P.dignity+' | 债务: $'+P.debt+'</p><div class="mg" id="mg"></div>';
+$('ga').innerHTML='<h2>🎰 赌博模拟器</h2><p>现金: $'+P.cash+' | 尊严: '+P.dignity+' | 债务: $'+P.debt+'</p><div class="mg" id="mg"></div>';
 var g=$('mg');
 G.forEach(function(gm){
 var b=document.createElement('div');b.className='mb';
 var ck=P.cash>=gm.c,dk=P.dignity>=gm.di,ld=!ck||!dk;
 if(ld)b.classList.add('l');
-b.innerHTML='<span class="i">'+ICONS[gm.icon]+'</span>'+gm.name;
-b.onclick=function(){
-if(ld){var rr='';if(P.cash<gm.c)rr+='需要$'+gm.c+' ';if(P.dignity<gm.di)rr+='需要尊严'+gm.di;og(rr,'l');return}
-switch(gm.id){
-case'dice':sd();break;case'scratch':ss();break;case'pinball':sp();break;
-case'work':sw();break;case'beg':bg();break;case'loan':sl();break;
-case'poker':spk();break;case'soccer':ssc();break;case'horse':sho();break;
-default:og('还没做好','i');
-}
-};
-g.appendChild(b);
-});
-}
-function bg(){
-var r=Math.random();
-if(r<0.2){var l=P.cash;P.cash=0;P.dignity=Math.max(0,P.dignity-5);og('被抢光$'+l+' 尊严-5','l');}
-else if(r<0.5){P.dignity=Math.max(0,P.dignity-1);og('啥也没讨到 尊严-1','l');}
-else{var e=Math.floor(Math.random()*5)+1;P.cash+=e;P.dignity=Math.max(0,P.dignity-2);og('讨到$'+e+' 尊严-2','w');}
-u();sm();
-}
-function sw(){
-var a=$('ga'),h='<h2>打工</h2><p>今日'+P.workN+'/'+MW+'次</p>';
-if(P.workN>=MW){h+='<p>太累了不能打工</p><button class="btn" onclick="pd()">过一天</button>';}
-else{J.forEach(function(j){h+='<button class="btn g" onclick="dw('+j.p+')">'+j.name+' $'+j.p+'</button> ';});}
-h+='<br><button class="btn" onclick="sm()">返回</button>';a.innerHTML=h;
-}
-function dw(p){if(P.workN>=MW)return;P.cash+=p;P.workN++;og('赚了$'+p,'w');u();sw();}
-function pd(){P.day++;P.workN=0;if(P.loan){P.loanD++;var o=Math.floor(P.loanA*Math.pow(1.05,P.loanD));P.debt=o;if(P.loanD>P.loanM)og('逾期！债主上门！','l');else og('第'+P.day+'天 债务$'+o,'l');}else og('第'+P.day+'天 平安无事','i');u();sm();}
-function sd(){var a=$('ga'),o='';for(var n=2;n<=12;n++)o+='<option value="'+n+'">'+n+'点('+DO[n].m+'倍)</option>';a.innerHTML='<h2>赌大小</h2><p>最低$5</p><div class="da"><div class="dd" id="d1">?</div><div class="dd" id="d2">?</div></div><p>押<select id="dB">'+o+'</select> $<input type="number" id="dA" value="5" min="5"></p><button class="btn r" onclick="rd()">掷骰子</button><button class="btn" onclick="sm()">返回</button>';}
-function rd(){var b=parseInt($('dA').value),g=parseInt($('dB').value);if(b<5||b>P.cash){og('无效','l');return;}var d1=Math.floor(Math.random()*6)+1,d2=Math.floor(Math.random()*6)+1,s=d1+d2;$('d1').textContent=d1;$('d2').textContent=d2;if(s===g){var w=b*DO[s].m;P.cash+=w;og('中了$'+w+'!','w');}else{P.cash-=b;og('输了$'+b,'l');}u();}
-function ss(){$('ga').innerHTML='<h2>刮刮乐</h2><p>每张$5</p><p style="font-size:30px;text-align:center" id="sR"></p><button class="btn o" onclick="bs()">买一张</button><button class="btn" onclick="sm()">返回</button>';}
-function bs(){if(P.cash<5){og('没钱了','l');return;}P.cash-=5;var r=Math.random(),p=0,m='';if(r<0.01){p=100;m='头奖$100!!';}else if(r<0.05){p=20;m='$20!';}else if(r<0.20){p=6;m='$6';}else if(r<0.40){p=1;m='$1';}else{m='没中';}P.cash+=p;$('sR').textContent=p>0?'$'+p:'没中';og(m,p>0?'w':'l');u();}
-function sp(){$('ga').innerHTML='<h2>弹珠机</h2><p>$5一次</p><p style="text-align:center;font-size:40px" id="pR"></p><button class="btn r" onclick="pp()">投弹</button><button class="btn" onclick="sm()">返回</button>';}
-function pp(){if(P.cash<5){og('没钱','l');return;}P.cash-=5;var h=[{r:0.05,p:30,n:'中心大奖'},{r:0.10,p:12,n:'蓝洞'},{r:0.20,p:5,n:'绿洞'},{r:0.30,p:2,n:'黄洞'},{r:0.35,p:0,n:'空洞'}];var ra=Math.random(),cu=0,re=h[h.length-1];for(var i=0;i<h.length;i++){cu+=h[i].r;if(ra<cu){re=h[i];break;}}if(re.p>0){P.cash+=re.p;$('pR').textContent=re.n;og('进了'+re.n+' $'+re.p,'w');}else{$('pR').textContent='没中';og('空洞','l');}u();}
-function sl(){var a=$('ga'),h='<h2>高利贷</h2>';if(P.loan){var o=Math.floor(P.loanA*Math.pow(1.05,P.loanD));h+='<p style="color:#e94560">欠款$'+o+' ('+P.loanD+'/'+P.loanM+'天)</p><button class="btn r" onclick="rp()">还清$'+o+'</button><button class="btn" onclick="pd()">过一天</button>';}else{h+='<table class="lt"><tr><th>级别</th><th>额度</th><th>日息</th><th>期限</th></tr>';for(var i=0;i<L.length;i++)h+='<tr><td>'+L[i].level+'</td><td>$'+L[i].a+'</td><td>'+(L[i].r*100)+'%</td><td>'+L[i].md+'天</td></tr>';h+='</table>';for(var i=0;i<L.length;i++)h+='<button class="btn o" onclick="tl('+i+')">借$'+L[i].a+'</button> ';}h+='<br><button class="btn" onclick="sm()">返回</button>';a.innerHTML=h;}
-function tl(i){if(P.loan){og('已有贷款','l');return;}P.cash+=L[i].a;P.loan=true;P.loanA=L[i].a;P.loanD=0;P.loanM=L[i].md;P.debt=L[i].a;u();og('借了$'+L[i].a,'i');sm();}
-function rp(){var o=Math.floor(P.loanA*Math.pow(1.05,P.loanD));if(P.cash<o){og('不够钱','l');return;}P.cash-=o;P.loan=false;P.loanA=0;P.loanD=0;P.debt=0;u();og('还清了！','w');sm();}
+b.innerHTML='<span class="i">'+IC[gm.icon]+'</span>'+gm.name;
+b.onclick=function(){sClick();if(ld){var rr='';if(P.cash<gm.c)rr+='需要$'+gm.c+' ';if(P.dignity<gm.di)rr+='需要尊严'+gm.di;og(rr,'l');return}
+switch(gm.id){case'dice':sd();break;case'scratch':ss();break;case'pinball':sp();break;case'work':sw();break;case'beg':bg();break;case'loan':sl();break;case'poker':spk();break;case'soccer':ssc();break;case'horse':sho();break;default:og('还没做好','i')}};
+g.appendChild(b)})}
+function bg(){var r=Math.random();if(r<0.2){var l=P.cash;P.cash=0;P.dignity=Math.max(0,P.dignity-5);sLose();og('被抢光$'+l+' 尊严-5','l')}else if(r<0.5){P.dignity=Math.max(0,P.dignity-1);og('啥也没讨到 尊严-1','l')}else{var e=Math.floor(Math.random()*5)+1;P.cash+=e;P.dignity=Math.max(0,P.dignity-2);sCoin();og('讨到$'+e+' 尊严-2','w')}u();sm()}
+function sw(){var a=$('ga'),h='<h2>💼 打工</h2><p>今日'+P.workN+'/'+MW+'次</p>';if(P.workN>=MW){h+='<p>太累了不能打工</p><button class="btn" onclick="pd()">过一天</button>'}else{J.forEach(function(j){h+='<button class="btn g" onclick="dw('+j.p+')">'+j.name+' $'+j.p+'</button> '})}h+='<br><button class="btn" onclick="sm()">返回</button>';a.innerHTML=h}
+function dw(p){if(P.workN>=MW)return;P.cash+=p;P.workN++;sCoin();og('赚了$'+p,'w');u();sw()}
+function pd(){P.day++;P.workN=0;if(P.loan){P.loanD++;var o=Math.floor(P.loanA*Math.pow(1.05,P.loanD));P.debt=o;if(P.loanD>P.loanM)og('逾期！债主上门！','l');else og('第'+P.day+'天 债务$'+o,'l')}else og('第'+P.day+'天 平安无事','i');u();sm()}
+function sd(){var a=$('ga'),o='';for(var n=2;n<=12;n++)o+='<option value="'+n+'">'+n+'点('+DO[n].m+'倍)</option>';a.innerHTML='<h2>🎲 赌大小</h2><p>最低$5</p><div class="da"><div class="dd" id="d1">?</div><div class="dd" id="d2">?</div></div><p>押<select id="dB">'+o+'</select> $<input type="number" id="dA" value="5" min="5"></p><button class="btn r" onclick="rd()">🎲 掷骰子</button><button class="btn" onclick="sm()">返回</button>'}
+function rd(){var b=parseInt($('dA').value),g=parseInt($('dB').value);if(b<5||b>P.cash){og('无效','l');return}sDice();setTimeout(function(){var d1=Math.floor(Math.random()*6)+1,d2=Math.floor(Math.random()*6)+1,s=d1+d2;$('d1').textContent=d1;$('d2').textContent=d2;if(s===g){var w=b*DO[s].m;P.cash+=w;sWin();og('中了$'+w+'!','w')}else{P.cash-=b;sLose();og('输了$'+b,'l')}u()},300)}
+function ss(){$('ga').innerHTML='<h2>🎫 刮刮乐</h2><p>每张$5</p><p style="font-size:30px;text-align:center" id="sR">🎫</p><button class="btn o" onclick="bs()">买一张</button><button class="btn" onclick="sm()">返回</button>'}
+function bs(){if(P.cash<5){og('没钱了','l');return}P.cash-=5;var r=Math.random(),p=0,m='';if(r<0.01){p=100;m='头奖$100!!'}else if(r<0.05){p=20;m='$20!'}else if(r<0.20){p=6;m='$6'}else if(r<0.40){p=1;m='$1'}else{m='没中'}P.cash+=p;$('sR').textContent=p>0?'🎉 $'+p:'💔 没中';if(p>0)sWin();else sLose();og(m,p>0?'w':'l');u()}
+function sp(){$('ga').innerHTML='<h2>🕹 弹珠机</h2><p>$5一次</p><p style="text-align:center;font-size:40px" id="pR">🎯</p><button class="btn r" onclick="pp()">投弹</button><button class="btn" onclick="sm()">返回</button>'}
+function pp(){if(P.cash<5){og('没钱','l');return}P.cash-=5;var h=[{r:0.05,p:30,n:'中心大奖'},{r:0.10,p:12,n:'蓝洞'},{r:0.20,p:5,n:'绿洞'},{r:0.30,p:2,n:'黄洞'},{r:0.35,p:0,n:'空洞'}];var ra=Math.random(),cu=0,re=h[h.length-1];for(var i=0;i<h.length;i++){cu+=h[i].r;if(ra<cu){re=h[i];break}}if(re.p>0){P.cash+=re.p;$('pR').textContent='🎯 '+re.n;sWin();og('进了'+re.n+' $'+re.p,'w')}else{$('pR').textContent='💨 没中';sLose();og('空洞','l')}u()}
+function sl(){var a=$('ga'),h='<h2>💰 高利贷</h2>';if(P.loan){var o=Math.floor(P.loanA*Math.pow(1.05,P.loanD));h+='<p style="color:#e94560">欠款$'+o+' ('+P.loanD+'/'+P.loanM+'天)</p><button class="btn r" onclick="rp()">还清$'+o+'</button><button class="btn" onclick="pd()">过一天</button>'}else{h+='<table class="lt"><tr><th>级别</th><th>额度</th><th>日息</th><th>期限</th></tr>';for(var i=0;i<L.length;i++)h+='<tr><td>'+L[i].level+'</td><td>$'+L[i].a+'</td><td>'+(L[i].r*100)+'%</td><td>'+L[i].md+'天</td></tr>';h+='</table>';for(var i=0;i<L.length;i++)h+='<button class="btn o" onclick="tl('+i+')">借$'+L[i].a+'</button> '}h+='<br><button class="btn" onclick="sm()">返回</button>';a.innerHTML=h}
+function tl(i){if(P.loan){og('已有贷款','l');return}P.cash+=L[i].a;P.loan=true;P.loanA=L[i].a;P.loanD=0;P.loanM=L[i].md;P.debt=L[i].a;u();sCoin();og('借了$'+L[i].a,'i');sm()}
+function rp(){var o=Math.floor(P.loanA*Math.pow(1.05,P.loanD));if(P.cash<o){og('不够钱','l');return}P.cash-=o;P.loan=false;P.loanA=0;P.loanD=0;P.debt=0;u();sCoin();og('还清了！','w');sm()}
 
 // Poker
-function nD(){var d=[];for(var s=0;s<4;s++)for(var r=0;r<13;r++)d.push({ri:r,su:SUITS[s],d:RN[r]+SUITS[s]});for(var i=d.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=d[i];d[i]=d[j];d[j]=t;}return d;}
-function eH(c){var r=c.map(function(x){return x.ri}).sort(function(a,b){return a-b}),su=c.map(function(x){return x.su});var sc={};su.forEach(function(x){sc[x]=(sc[x]||0)+1});var fl=Object.keys(sc).some(function(x){return sc[x]>=5});var rc={};r.forEach(function(x){rc[x]=(rc[x]||0)+1});var ct=Object.values(rc).sort(function(a,b){return b-a}),ur=Object.keys(rc).map(Number).sort(function(a,b){return b-a});var st=false,sh=0,us=[...new Set(r)].sort(function(a,b){return a-b});for(var i=0;i<=us.length-5;i++){if(us[i+4]-us[i]===4){st=true;sh=us[i+4];break;}}if(us.includes(12)&&us.includes(0)&&us.includes(1)&&us.includes(2)&&us.includes(3)){st=true;sh=3;}if(fl&&st&&sh===12)return{rank:9,name:'RF',high:sh};if(fl&&st)return{rank:8,name:'SF',high:sh};if(ct[0]===4)return{rank:7,name:'4ok',high:ur.find(function(x){return rc[x]===4})};if(ct[0]===3&&ct[1]>=2)return{rank:6,name:'FH',high:ur.find(function(x){return rc[x]===3})};if(fl)return{rank:5,name:'FL',high:ur[0]};if(st)return{rank:4,name:'ST',high:sh};if(ct[0]===3)return{rank:3,name:'TK',high:ur.find(function(x){return rc[x]===3})};if(ct[0]===2&&ct[1]===2)return{rank:2,name:'2P',high:ur.filter(function(x){return rc[x]===2}).sort(function(a,b){return b-a})[0]};if(ct[0]===2)return{rank:1,name:'1P',high:ur.find(function(x){return rc[x]===2})};return{rank:0,name:'HC',high:ur[0]};}
-function aA(lv,hand,com,pot,cb,chip,ab){var ev=eH([...hand,...com]),st=ev.rank+ev.high/100,r=Math.random(),tc=cb-ab;switch(lv){case'高手':if(st>4.5)return r<0.7?{a:'r',am:Math.floor(pot*(0.5+r*0.5))+tc}:{a:'c'};else if(st>2){if(tc===0)return{a:'k'};return tc/pot<0.2?{a:'c'}:{a:'f'};}else{if(r<0.15)return{a:'r',am:Math.floor(pot*0.5)+(tc>0?tc:0)};if(tc===0)return{a:'k'};return tc/pot>0.3?{a:'c'}:{a:'f'};}case'普通':if(st>5)return r<0.4?{a:'r',am:Math.floor(pot*0.3)+tc}:{a:'c'};else if(st>2){if(tc===0)return{a:'k'};return tc/pot<0.3?{a:'c'}:{a:'f'};}else{if(tc<=0||r<0.05)return{a:'k'};return{a:'f'};}default:if(st>5)return r<0.5?{a:'c'}:{a:'r',am:Math.floor(pot*0.2)+tc};else if(st>2){if(tc===0)return{a:'k'};return r<0.4?{a:'c'}:{a:'f'};}else{if(tc===0)return{a:'k'};return r<0.2?{a:'c'}:{a:'f'};}}}
-
-function spk(){$('ga').innerHTML='<h2>德州扑克</h2><div style="background:#0a0a1a;border-radius:6px;padding:10px;margin-bottom:10px;font-size:12px;color:#ccc;"><b style="color:#4ecca3;">规则</b><br>每人2张底牌+5张公共牌，7选5比大小<br>轮次：翻牌前/翻牌(3张)/转牌(1张)/河牌(1张)/摊牌<br>操作：过牌/跟注/加注/弃牌<br>AI摊牌时才亮底牌</div><p style="text-align:center;font-size:13px;color:#888;">选择盲注级别开始</p><div style="display:flex;justify-content:center;gap:8px;flex-wrap:wrap;"><button class="btn g" onclick="st(50)">低 $50</button><button class="btn o" onclick="st(250)">中 $250</button><button class="btn r" onclick="st(500)">高 $500</button></div><button class="btn" onclick="sm()">返回</button>';}
-function st(bl){if(P.cash<bl*10){og('需要$'+(bl*10),'l');return;}P.cash-=bl*10;ps={blind:bl,deck:nD(),ph:[],ah:[],com:[],pot:0,stage:'p',pb:0,ab:[0,0,0],cb:0,fd:[false,false,false,false],ch:[bl*10,bl*10,bl*10,bl*10],acts:[],ro:false};var sb=Math.floor(bl/2);ps.ch[1]-=sb;ps.ch[2]-=bl;ps.ab[1]=sb;ps.ab[2]=bl;ps.cb=bl;ps.pot=sb+bl;ps.ph=[ps.deck.pop(),ps.deck.pop()];for(var i=0;i<3;i++)ps.ah.push([ps.deck.pop(),ps.deck.pop()]);rpk();}
-function rpk(){var s=ps,a=$('ga');var pc=s.ph.map(function(c){return'<span style="color:'+(c.su==='H'||c.su==='D'?'#e94560':'#eee')+'">'+c.d+'</span>'}).join(' ');var cc=s.com.map(function(c){return'<span style="color:'+(c.su==='H'||c.su==='D'?'#e94560':'#eee')+'">'+c.d+'</span>'}).join(' ');var cd=s.com.length===0?'':cc;var sn={p:'翻牌前',f:'翻牌',t:'转牌',r:'河牌'};var h='<h2>德州扑克</h2><p style="text-align:center;font-size:12px;color:#888;">'+sn[s.stage]+' | 底池$'+s.pot+'</p><div style="display:flex;justify-content:space-around;margin:8px 0;font-size:12px;">';for(var i=0;i<3;i++){var fld=s.fd[i+1]?'弃牌':'';var bt=s.ab[i+1]>0?'$'+s.ab[i+1]:'';var hd=s.ro&&s.ah[i]?s.ah[i].map(function(c){return'<span style="color:'+(c.su==='H'||c.su==='D'?'#e94560':'#eee')+'">'+c.d+'</span>'}).join(' '):'??';h+='<div><b>'+AN[i]+'</b> '+fld+'<br>'+hd+'<br><small>$'+s.ch[i+1]+' '+bt+'</small></div>';}h+='</div><div style="text-align:center;font-size:16px;margin:8px 0;">'+cd+'</div><div style="text-align:center;font-size:16px;margin:6px 0;">'+pc+'</div><p style="text-align:center;font-size:13px;">你 | $'+s.ch[0];if(s.pb>0)h+=' 下注$'+s.pb;h+='</p>';if(s.acts.length>0){h+='<div style="font-size:11px;color:#888;margin:6px 0;">';for(var i=Math.max(0,s.acts.length-5);i<s.acts.length;i++)h+='<div>'+s.acts[i]+'</div>';h+='</div>';}if(!s.ro&&!s.fd[0]&&s.ch[0]>0){var tc=s.cb-s.pb;h+='<div style="text-align:center;margin-top:8px;">';if(tc===0)h+='<button class="btn g s" onclick="pa(\'k\')">过牌</button> ';if(tc>0)h+='<button class="btn r s" onclick="pa(\'c\')">跟注$'+tc+'</button> ';if(s.ch[0]>tc){var mr=Math.max(tc+Math.floor(s.blind/2),tc*2);h+='<button class="btn o s" onclick="pa(\'r\')">加注</button> <input type="number" id="rA" value="'+Math.min(mr,s.ch[0])+'" min="'+Math.min(mr,s.ch[0])+'" max="'+s.ch[0]+'" style="width:60px;">';}h+=' <button class="btn r s" onclick="pa(\'f\')">弃牌</button></div>';}if(s.ro)h+='<button class="btn g" onclick="spk()" style="display:block;margin:10px auto;">再来一局</button>';h+='<button class="btn" onclick="sm()">退出</button>';a.innerHTML=h;}
-function pa(ac){var s=ps;if(s.ro)return;var tc=s.cb-s.pb;switch(ac){case'f':s.fd[0]=true;P.cash+=s.ch[0];s.acts.push('你弃牌');s.ro=true;rpk();og('弃牌','l');return;case'k':s.acts.push('你过牌');break;case'c':if(tc>s.ch[0]){og('筹码不够','l');return;}s.ch[0]-=tc;s.pb+=tc;s.pot+=tc;s.acts.push('你跟注$'+tc);break;case'r':var ra=parseInt($('rA').value);if(!ra||ra<=tc||ra>s.ch[0]){og('无效','l');return;}s.ch[0]-=ra;s.pb+=ra;s.pot+=ra;s.cb=s.pb;s.acts.push('你加注到$'+s.pb);break;}pr();}
-function pr(){var s=ps;if(s.ro)return;var it=0;while(it<20){it++;var allD=true;for(var i=1;i<=3;i++){if(s.fd[i]||s.ch[i]<=0)continue;var act=[0,1,2,3].filter(function(j){return!s.fd[j]&&s.ch[j]>0}).length;if(act<=1){allD=true;break;}var aiTc=s.cb-s.ab[i];if(aiTc===0)continue;var dc=aA(AL[i-1],s.ah[i-1],s.com,s.pot,s.cb,s.ch[i],s.ab[i]);switch(dc.a){case'f':s.fd[i]=true;s.acts.push(AN[i-1]+'弃牌');break;case'c':var ca=Math.min(aiTc,s.ch[i]);s.ch[i]-=ca;s.ab[i]+=ca;s.pot+=ca;if(ca>0)s.acts.push(AN[i-1]+'跟注$'+ca);else s.acts.push(AN[i-1]+'过牌');break;case'r':var ra2=Math.min(dc.am,s.ch[i]);if(ra2<=s.cb-s.ab[i]){var ca2=Math.min(s.cb-s.ab[i],s.ch[i]);s.ch[i]-=ca2;s.ab[i]+=ca2;s.pot+=ca2;s.acts.push(AN[i-1]+'跟注$'+ca2);break;}s.ch[i]-=ra2;s.ab[i]+=ra2;s.pot+=ra2;s.cb=Math.max(s.cb,s.ab[i]);s.acts.push(AN[i-1]+'加注到$'+s.ab[i]);break;}var rm=[0,1,2,3].filter(function(j){return!s.fd[j]&&s.ch[j]>0});if(rm.length<=1){s.ro=true;P.cash+=s.ch[0];var rk=Math.floor(s.pot*0.1);s.pot-=rk;if(rm[0]===0){P.cash+=s.pot;s.acts.push('你赢了$'+s.pot);}else{s.ch[rm[0]]+=s.pot;s.acts.push(AN[rm[0]-1]+'赢了$'+s.pot);}u();rpk();og(s.acts[s.acts.length-1],rm[0]===0?'w':'l');return;}}var ap=[0,1,2,3].filter(function(j){return!s.fd[j]&&s.ch[j]>0});var asb=ap.every(function(j){return(j===0?s.pb:s.ab[j])===s.cb});if(asb)break;allD=false;}var act2=[0,1,2,3].filter(function(j){return!s.fd[j]&&s.ch[j]>0});var ai2=act2.every(function(j){return(j===0?s.pb:s.ab[j])===s.cb||s.ch[j]<=0});if(ai2&&act2.length>1)nx();else rpk();}
-function nx(){var s=ps;switch(s.stage){case'p':s.deck.pop();s.com.push(s.deck.pop(),s.deck.pop(),s.deck.pop());s.stage='f';s.acts.push('翻牌');break;case'f':s.deck.pop();s.com.push(s.deck.pop());s.stage='t';s.acts.push('转牌');break;case't':s.deck.pop();s.com.push(s.deck.pop());s.stage='r';s.acts.push('河牌');break;case'r':sd2();return;}s.pb=0;s.ab=[0,0,0];s.cb=0;rpk();setTimeout(function(){pr();},200);}
-function sd2(){var s=ps;s.ro=true;P.cash+=s.ch[0];var ap=[0,1,2,3].filter(function(j){return!s.fd[j]&&s.ch[j]>0});var bs=-1,wn=[],bn='';ap.forEach(function(j){var ca=j===0?s.ph:s.ah[j-1];var al=[...ca,...s.com];var r2=eH(al);var sc=r2.rank*100+r2.high;if(sc>bs){bs=sc;wn=[j];bn=r2.name;}else if(sc===bs){wn.push(j);}});var rk=Math.floor(s.pot*0.1);s.pot-=rk;var wa=Math.floor(s.pot/wn.length);wn.forEach(function(j){if(j===0)P.cash+=wa;else s.ch[j]+=wa;});var msg='';if(wn.length===1&&wn[0]===0)msg='你赢了！'+HN[bn]+'！$'+wa;else if(wn.includes(0))msg='平局！'+HN[bn]+' 你得$'+wa;else msg=AN[wn[0]-1]+'赢了 '+HN[bn]+' $'+wa;og(msg,wn.includes(0)?'w':'l');s.acts.push(msg);u();rpk();}
+function nD(){var d=[];for(var s=0;s<4;s++)for(var r=0;r<13;r++)d.push({ri:r,su:SU[s],d:RN[r]+SU[s]});for(var i=d.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)),t=d[i];d[i]=d[j];d[j]=t}return d}
+function eH(c){var r=c.map(function(x){return x.ri}).sort(function(a,b){return a-b}),su=c.map(function(x){return x.su});var sc={};su.forEach(function(x){sc[x]=(sc[x]||0)+1});var fl=Object.keys(sc).some(function(x){return sc[x]>=5});var rc={};r.forEach(function(x){rc[x]=(rc[x]||0)+1});var ct=Object.values(rc).sort(function(a,b){return b-a}),ur=Object.keys(rc).map(Number).sort(function(a,b){return b-a});var st=false,sh=0,us=[...new Set(r)].sort(function(a,b){return a-b});for(var i=0;i<=us.length-5;i++){if(us[i+4]-us[i]===4){st=true;sh=us[i+4];break}}if(us.includes(12)&&us.includes(0)&&us.includes(1)&&us.includes(2)&&us.includes(3)){st=true;sh=3}if(fl&&st&&sh===12)return{rank:9,name:'RF',high:sh};if(fl&&st)return{rank:8,name:'SF',high:sh};if(ct[0]===4)return{rank:7,name:'4ok',high:ur.find(function(x){return rc[x]===4})};if(ct[0]===3&&ct[1]>=2)return{rank:6,name:'FH',high:ur.find(function(x){return rc[x]===3})};if(fl)return{rank:5,name:'FL',high:ur[0]};if(st)return{rank:4,name:'ST',high:sh};if(ct[0]===3)return{rank:3,name:'TK',high:ur.find(function(x){return rc[x]===3})};if(ct[0]===2&&ct[1]===2)return{rank:2,name:'2P',high:ur.filter(function(x){return rc[x]===2}).sort(function(a,b){return b-a})[0]};if(ct[0]===2)return{rank:1,name:'1P',high:ur.find(function(x){return rc[x]===2})};return{rank:0,name:'HC',high:ur[0]}}
+function aA(lv,hand,com,pot,cb,chip,ab){var ev=eH([...hand,...com]),st=ev.rank+ev.high/100,r=Math.random(),tc=cb-ab;switch(lv){case'高手':if(st>4.5)return r<0.7?{a:'r',am:Math.floor(pot*(0.5+r*0.5))+tc}:{a:'c'};else if(st>2){if(tc===0)return{a:'k'};return tc/pot<0.2?{a:'c'}:{a:'f'}}else{if(r<0.15)return{a:'r',am:Math.floor(pot*0.5)+(tc>0?tc:0)};if(tc===0)return{a:'k'};return tc/pot>0.3?{a:'c'}:{a:'f'}}case'普通':if(st>5)return r<0.4?{a:'r',am:Math.floor(pot*0.3)+tc}:{a:'c'};else if(st>2){if(tc===0)return{a:'k'};return tc/pot<0.3?{a:'c'}:{a:'f'}}else{if(tc<=0||r<0.05)return{a:'k'};return{a:'f'}}default:if(st>5)return r<0.5?{a:'c'}:{a:'r',am:Math.floor(pot*0.2)+tc};else if(st>2){if(tc===0)return{a:'k'};return r<0.4?{a:'c'}:{a:'f'}}else{if(tc===0)return{a:'k'};return r<0.2?{a:'c'}:{a:'f'}}}}
+function spk(){$('ga').innerHTML='<h2>🃏 德州扑克</h2><div style="background:#0a0a05;border:1px solid #3d2a00;border-radius:8px;padding:10px;margin-bottom:10px;font-size:12px;color:#c0b090;"><b style="color:#f5d68e;">📖 规则</b><br>每人2张底牌+5张公共牌，7选5比大小<br>轮次：翻牌前→翻牌(3张)→转牌(1张)→河牌(1张)→摊牌<br>操作：过牌/跟注/加注/弃牌<br>AI摊牌时才亮底牌</div><p style="text-align:center;font-size:13px;color:#a08050;">选择盲注级别开始</p><div style="display:flex;justify-content:center;gap:8px;flex-wrap:wrap;"><button class="btn g" onclick="st(50)">低 $50</button><button class="btn o" onclick="st(250)">中 $250</button><button class="btn r" onclick="st(500)">高 $500</button></div><button class="btn" onclick="sm()">返回</button>'}
+function st(bl){if(P.cash<bl*10){og('需要$'+(bl*10),'l');return}P.cash-=bl*10;ps={blind:bl,deck:nD(),ph:[],ah:[],com:[],pot:0,stage:'p',pb:0,ab:[0,0,0],cb:0,fd:[false,false,false,false],ch:[bl*10,bl*10,bl*10,bl*10],acts:[],ro:false};var sb=Math.floor(bl/2);ps.ch[1]-=sb;ps.ch[2]-=bl;ps.ab[1]=sb;ps.ab[2]=bl;ps.cb=bl;ps.pot=sb+bl;ps.ph=[ps.deck.pop(),ps.deck.pop()];for(var i=0;i<3;i++)ps.ah.push([ps.deck.pop(),ps.deck.pop()]);rpk()}
+function rpk(){var s=ps,a=$('ga');var pc=s.ph.map(function(c){return'<span style="color:'+(c.su==='H'||c.su==='D'?'#e94560':'#e0d5c0')+'">'+c.d+'</span>'}).join(' ');var cc=s.com.map(function(c){return'<span style="color:'+(c.su==='H'||c.su==='D'?'#e94560':'#e0d5c0')+'">'+c.d+'</span>'}).join(' ');var cd=s.com.length===0?'':cc;var sn={p:'翻牌前',f:'翻牌',t:'转牌',r:'河牌'};var h='<h2>🃏 德州扑克</h2><p style="text-align:center;font-size:12px;color:#a08050;">'+sn[s.stage]+' | 底池$'+s.pot+'</p><div style="display:flex;justify-content:space-around;margin:8px 0;font-size:12px;">';for(var i=0;i<3;i++){var fld=s.fd[i+1]?'弃牌':'';var bt=s.ab[i+1]>0?'$'+s.ab[i+1]:'';var hd=s.ro&&s.ah[i]?s.ah[i].map(function(c){return'<span style="color:'+(c.su==='H'||c.su==='D'?'#e94560':'#e0d5c0')+'">'+c.d+'</span>'}).join(' '):'??';h+='<div><b>'+AN[i]+'</b> '+fld+'<br>'+hd+'<br><small>$'+s.ch[i+1]+' '+bt+'</small></div>'}h+='</div><div style="text-align:center;font-size:16px;margin:8px 0;">'+cd+'</div><div style="text-align:center;font-size:16px;margin:6px 0;">'+pc+'</div><p style="text-align:center;font-size:13px;">你 | $'+s.ch[0];if(s.pb>0)h+=' 下注$'+s.pb;h+='</p>';if(s.acts.length>0){h+='<div style="font-size:11px;color:#8a7050;margin:6px 0;">';for(var i=Math.max(0,s.acts.length-5);i<s.acts.length;i++)h+='<div>'+s.acts[i]+'</div>';h+='</div>'}if(!s.ro&&!s.fd[0]&&s.ch[0]>0){var tc=s.cb-s.pb;h+='<div style="text-align:center;margin-top:8px;">';if(tc===0)h+='<button class="btn g s" onclick="pa(\'k\')">过牌</button> ';if(tc>0)h+='<button class="btn r s" onclick="pa(\'c\')">跟注$'+tc+'</button> ';if(s.ch[0]>tc){var mr=Math.max(tc+Math.floor(s.blind/2),tc*2);h+='<button class="btn o s" onclick="pa(\'r\')">加注</button> <input type="number" id="rA" value="'+Math.min(mr,s.ch[0])+'" min="'+Math.min(mr,s.ch[0])+'" max="'+s.ch[0]+'" style="width:60px;">'}h+=' <button class="btn r s" onclick="pa(\'f\')">弃牌</button></div>'}if(s.ro)h+='<button class="btn g" onclick="spk()" style="display:block;margin:10px auto;">再来一局</button>';h+='<button class="btn" onclick="sm()">退出</button>';a.innerHTML=h}
+function pa(ac){var s=ps;if(s.ro)return;var tc=s.cb-s.pb;switch(ac){case'f':s.fd[0]=true;P.cash+=s.ch[0];s.acts.push('你弃牌');s.ro=true;rpk();sLose();og('弃牌','l');return;case'k':s.acts.push('你过牌');break;case'c':if(tc>s.ch[0]){og('筹码不够','l');return}s.ch[0]-=tc;s.pb+=tc;s.pot+=tc;s.acts.push('你跟注$'+tc);break;case'r':var ra=parseInt($('rA').value);if(!ra||ra<=tc||ra>s.ch[0]){og('无效','l');return}s.ch[0]-=ra;s.pb+=ra;s.pot+=ra;s.cb=s.pb;s.acts.push('你加注到$'+s.pb);break}pr()}
+function pr(){var s=ps;if(s.ro)return;var it=0;while(it<20){it++;var allD=true;for(var i=1;i<=3;i++){if(s.fd[i]||s.ch[i]<=0)continue;var act=[0,1,2,3].filter(function(j){return!s.fd[j]&&s.ch[j]>0}).length;if(act<=1){allD=true;break}var aiTc=s.cb-s.ab[i];if(aiTc===0)continue;var dc=aA(AL[i-1],s.ah[i-1],s.com,s.pot,s.cb,s.ch[i],s.ab[i]);switch(dc.a){case'f':s.fd[i]=true;s.acts.push(AN[i-1]+'弃牌');break;case'c':var ca=Math.min(aiTc,s.ch[i]);s.ch[i]-=ca;s.ab[i]+=ca;s.pot+=ca;if(ca>0)s.acts.push(AN[i-1]+'跟注$'+ca);else s.acts.push(AN[i-1]+'过牌');break;case'r':var ra2=Math.min(dc.am,s.ch[i]);if(ra2<=s.cb-s.ab[i]){var ca2=Math.min(s.cb-s.ab[i],s.ch[i]);s.ch[i]-=ca2;s.ab[i]+=ca2;s.pot+=ca2;s.acts.push(AN[i-1]+'跟注$'+ca2);break}s.ch[i]-=ra2;s.ab[i]+=ra2;s.pot+=ra2;s.cb=Math.max(s.cb,s.ab[i]);s.acts.push(AN[i-1]+'加注到$'+s.ab[i]);break}var rm=[0,1,2,3].filter(function(j){return!s.fd[j]&&s.ch[j]>0});if(rm.length<=1){s.ro=true;P.cash+=s.ch[0];var rk=Math.floor(s.pot*0.1);s.pot-=rk;if(rm[0]===0){P.cash+=s.pot;s.acts.push('你赢了$'+s.pot);sWin()}else{s.ch[rm[0]]+=s.pot;s.acts.push(AN[rm[0]-1]+'赢了$'+s.pot);sLose()}u();rpk();og(s.acts[s.acts.length-1],rm[0]===0?'w':'l');return}}var ap=[0,1,2,3].filter(function(j){return!s.fd[j]&&s.ch[j]>0});var asb=ap.every(function(j){return(j===0?s.pb:s.ab[j])===s.cb});if(asb)break;allD=false}var act2=[0,1,2,3].filter(function(j){return!s.fd[j]&&s.ch[j]>0});var ai2=act2.every(function(j){return(j===0?s.pb:s.ab[j])===s.cb||s.ch[j]<=0});if(ai2&&act2.length>1)nx();else rpk()}
+function nx(){var s=ps;switch(s.stage){case'p':s.deck.pop();s.com.push(s.deck.pop(),s.deck.pop(),s.deck.pop());s.stage='f';s.acts.push('翻牌');break;case'f':s.deck.pop();s.com.push(s.deck.pop());s.stage='t';s.acts.push('转牌');break;case't':s.deck.pop();s.com.push(s.deck.pop());s.stage='r';s.acts.push('河牌');break;case'r':sd2();return}s.pb=0;s.ab=[0,0,0];s.cb=0;rpk();setTimeout(function(){pr()},200)}
+function sd2(){var s=ps;s.ro=true;P.cash+=s.ch[0];var ap=[0,1,2,3].filter(function(j){return!s.fd[j]&&s.ch[j]>0});var bs=-1,wn=[],bn='';ap.forEach(function(j){var ca=j===0?s.ph:s.ah[j-1];var al=[...ca,...s.com];var r2=eH(al);var sc=r2.rank*100+r2.high;if(sc>bs){bs=sc;wn=[j];bn=r2.name}else if(sc===bs){wn.push(j)}});var rk=Math.floor(s.pot*0.1);s.pot-=rk;var wa=Math.floor(s.pot/wn.length);wn.forEach(function(j){if(j===0)P.cash+=wa;else s.ch[j]+=wa});var msg='';if(wn.length===1&&wn[0]===0){msg='你赢了！'+HN[bn]+'！$'+wa;sWin()}else if(wn.includes(0)){msg='平局！'+HN[bn]+' 你得$'+wa;sWin()}else{msg=AN[wn[0]-1]+'赢了 '+HN[bn]+' $'+wa;sLose()}og(msg,wn.includes(0)?'w':'l');s.acts.push(msg);u();rpk()}
 
 // Soccer
-function ssc(){var a=$('ga'),t=[],h='<h2>赌球</h2>';for(var i=0;i<4;i++){var idx=Math.floor(Math.random()*TEAMS.length);if(t.indexOf(idx)<0)t.push(idx);else i--;}var ht=TEAMS[t[0]],at=TEAMS[t[1]];SG={h:ht,a:at,bet:0};h+='<p>'+ht.n+' vs '+at.n+'</p><p>赔率：主胜'+(200-ht.s)+'% 客胜'+(200-at.s)+'% 平30%</p><button class="btn" onclick="sb(\'h\')">押主胜</button> <button class="btn" onclick="sb(\'a\')">押客胜</button> <button class="btn" onclick="sb(\'d\')">押平局</button><br><p>下注$<input type="number" id="sBA" value="10" min="5"></p><div id="sR"></div><button class="btn" onclick="sm()">返回</button>';a.innerHTML=h;}
-function sb(tp){var amt=parseInt($('sBA').value);if(!amt||amt<5||amt>P.cash){og('金额无效','l');return;}var s=SG;var r=Math.random()*100,hW=200-s.h.s,aW=200-s.a.s,dW=30,tot=hW+aW+dW,hP=hW/tot,aP=(hW+aW)/tot,win='';if(r<hP)win='h';else if(r<aP)win='a';else win='d';var odds={h:Math.floor(tot/hW*0.85),a:Math.floor(tot/aW*0.85),d:Math.floor(tot/dW*0.85)};P.cash-=amt;if(win===tp){var w=amt*odds[tp];P.cash+=w+amt;og('赢了！$'+(w+amt),'w');}else{og('输了$'+amt,'l');}u();ssc();}
+function ssc(){var a=$('ga'),h='<h2>⚽ 赌球</h2>';var t=[];for(var i=0;i<4;i++){var idx=Math.floor(Math.random()*TM.length);if(t.indexOf(idx)<0)t.push(idx);else i--}var ht=TM[t[0]],at=TM[t[1]];SG={h:ht,a:at};h+='<p>'+ht.n+' vs '+at.n+'</p><p>赔率：主胜'+(200-ht.s)+'% 客胜'+(200-at.s)+'% 平30%</p><button class="btn" onclick="sb(\'h\')">押主胜</button> <button class="btn" onclick="sb(\'a\')">押客胜</button> <button class="btn" onclick="sb(\'d\')">押平局</button><br><p>下注$<input type="number" id="sBA" value="10" min="5"></p><div id="sR"></div><button class="btn" onclick="sm()">返回</button>';a.innerHTML=h}
+function sb(tp){var amt=parseInt($('sBA').value);if(!amt||amt<5||amt>P.cash){og('金额无效','l');return}var s=SG;var r=Math.random()*100,hW=200-s.h.s,aW=200-s.a.s,dW=30,tot=hW+aW+dW,hP=hW/tot,aP=(hW+aW)/tot,win='';if(r<hP)win='h';else if(r<aP)win='a';else win='d';var odds={h:Math.floor(tot/hW*0.85),a:Math.floor(tot/aW*0.85),d:Math.floor(tot/dW*0.85)};P.cash-=amt;if(win===tp){var w=amt*odds[tp];P.cash+=w+amt;sWin();og('赢了！$'+(w+amt),'w')}else{sLose();og('输了$'+amt,'l')}u();ssc()}
 
 // Horse
-function sho(){var a=$('ga'),h='<h2>赌马</h2><p style="color:#e94560;font-size:11px;">最低下注$5000</p>';var hs=[];for(var i=0;i<4;i++){var sp=Math.floor(Math.random()*50+50);var st=Math.floor(Math.random()*50+50);hs.push({n:HN2[i],sp:sp,st:st,od:0,str:sp+st});}var tstr=0;hs.forEach(function(x){tstr+=x.str;});hs.forEach(function(x){x.od=Math.floor(tstr/x.str*0.85*100)/100;});HR={hs:hs,bet:0};h+='<div style="font-size:13px">';hs.forEach(function(x,i){h+='<p>'+x.n+' 速度'+x.sp+' 耐力'+x.st+' 赔率'+x.od+'</p>';});h+='</div><p>押<select id="hB">';for(var i=0;i<4;i++)h+='<option value="'+i+'">'+hs[i].n+'</option>';h+='</select> $<input type="number" id="hA" value="10" min="5"><br><button class="btn" onclick="hb()">下注开跑</button></p><div id="hR"><p>选一匹马下注！</p></div><button class="btn" onclick="sm()">返回</button>';a.innerHTML=h;}
-function hb(){var amt=parseInt($('hA').value),pick=parseInt($('hB').value);if(!amt||amt<5000||amt>P.cash){og('需要$5000以上','l');return;}var r=HR;P.cash-=amt;var res=[];for(var i=0;i<4;i++){var sc=r.hs[i].sp*Math.random()*0.5+r.hs[i].st*Math.random()*0.3;res.push({i:i,s:sc});}res.sort(function(a,b){return b.s-a.s});var win2=res[0].i,ordr=res.map(function(x){return r.hs[x.i].n;}).join(' > ');if(win2===pick){var w2=Math.floor(amt*r.hs[pick].od);P.cash+=w2+amt;$('hR').innerHTML='<p style="color:#4ecca3">'+r.hs[win2].n+'夺冠！你赢了$'+w2+'！<br>'+ordr+'</p>';og('赌马赢了$'+w2,'w');}else{$('hR').innerHTML='<p style="color:#e94560">'+r.hs[win2].n+'夺冠！你输了<br>'+ordr+'</p>';og('赌马输了$'+amt,'l');}u();}
+function sho(){var a=$('ga'),h='<h2>🐎 赌马</h2><p style="color:#e94560;font-size:11px;">最低下注$5000</p>';var hs=[];for(var i=0;i<4;i++){var sp=Math.floor(Math.random()*50+50),st=Math.floor(Math.random()*50+50);hs.push({n:HN2[i],sp:sp,st:st,od:0,str:sp+st})}var tstr=0;hs.forEach(function(x){tstr+=x.str});hs.forEach(function(x){x.od=Math.floor(tstr/x.str*0.85*100)/100});HR={hs:hs};h+='<div style="font-size:13px">';hs.forEach(function(x,i){h+='<p>'+x.n+' 速度'+x.sp+' 耐力'+x.st+' 赔率'+x.od+'</p>'});h+='</div><p>押<select id="hB">';for(var i=0;i<4;i++)h+='<option value="'+i+'">'+hs[i].n+'</option>';h+='</select> $<input type="number" id="hA" value="5000" min="5000"><br><button class="btn" onclick="hb()">🐎 下注开跑</button></p><div id="hR"><p>选一匹马下注！</p></div><button class="btn" onclick="sm()">返回</button>';a.innerHTML=h}
+function hb(){var amt=parseInt($('hA').value),pick=parseInt($('hB').value);if(!amt||amt<5000||amt>P.cash){og('需要$5000以上','l');return}var r=HR;P.cash-=amt;var res=[];for(var i=0;i<4;i++){var sc=r.hs[i].sp*Math.random()*0.5+r.hs[i].st*Math.random()*0.3;res.push({i:i,s:sc})}res.sort(function(a,b){return b.s-a.s});var win2=res[0].i,ordr=res.map(function(x){return r.hs[x.i].n}).join(' > ');if(win2===pick){var w2=Math.floor(amt*r.hs[pick].od);P.cash+=w2+amt;sWin();$('hR').innerHTML='<p style="color:#4ecca3">🏆 '+r.hs[win2].n+'夺冠！你赢了$'+w2+'！<br>'+ordr+'</p>';og('赌马赢了$'+w2,'w')}else{sLose();$('hR').innerHTML='<p style="color:#e94560">'+r.hs[win2].n+'夺冠！你输了<br>'+ordr+'</p>';og('赌马输了$'+amt,'l')}u()}
 
-function init(){u();sm();og('游戏开始！本金$50','i');}
+function init(){u();sm();og('🎰 游戏开始！本金$50','i')}
 window.onload=init;
 </script>
 </body>
