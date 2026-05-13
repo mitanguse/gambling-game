@@ -680,7 +680,7 @@ function showFutures() {
     h += '</div><p>品种 <select id="fSel">';
     FUTURES.forEach(function(f,i){ h += '<option value="'+i+'">'+f.name+'</option>'; });
     h += '</select><br>方向 <select id="fDir"><option value="long">做多</option><option value="short">做空</option></select>';
-    h += '<br>投入 $<input type="number" id="fAmt" value="1000" min="100"><br>';
+    h += '<br>投入 $<input type="number" id="fAmt" value="10000" min="10000"><br>';
     h += '<button class="btn btn-lose" onclick="openFutures()">📈 开仓</button></p><div id="fPos"></div>';
     if (futuresPositions) {
         let f = FUTURES[futuresPositions.idx];
@@ -697,7 +697,7 @@ function showFutures() {
 }
 function openFutures() {
     let idx = parseInt($("fSel").value), dir = $("fDir").value, amt = parseInt($("fAmt").value);
-    if (!amt || amt<100 || amt>Player.cash) { log("金额无效","lose"); return; }
+    if (!amt || amt<10000 || amt>Player.cash) { log("金额无效","lose"); return; }
     addCash(-amt);
     futuresPositions = {idx:idx, dir:dir, amount:amt, openPrice:FUTURES[idx].price};
     log("📈 开仓 "+FUTURES[idx].name+" "+(dir==="long"?"多":"空")+" $"+amt,"info");
