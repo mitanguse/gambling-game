@@ -265,10 +265,10 @@ const GAMES = [
     { id: 'work',    name: '打工',   icon: '💼', cash: 0,   dignity: 0  },
     { id: 'beg',     name: '乞讨',   icon: '🪱', cash: 0,   dignity: 0  },
     { id: 'loan',    name: '借钱',   icon: '💰', cash: 0,   dignity: 0  },
-    { id: 'poker',   name: '德州扑克', icon: '🃏', cash: 500, dignity: 30 },
-    { id: 'soccer',  name: '赌球',   icon: '⚽', cash: 2000, dignity: 40 },
-    { id: 'horse',   name: '赌马',   icon: '🐎', cash: 2000, dignity: 40 },
-    { id: 'futures', name: '炒期货', icon: '📈', cash: 10000, dignity: 50 }
+    { id: 'poker',   name: '德州扑克', icon: '🃏', cash: 500 },
+    { id: 'soccer',  name: '赌球',   icon: '⚽', cash: 2000 },
+    { id: 'horse',   name: '赌马',   icon: '🐎', cash: 2000 },
+    { id: 'futures', name: '炒期货', icon: '📈', cash: 10000 }
 ];
 
 // ============================================================
@@ -283,8 +283,6 @@ function updateStatus() {
     $('statusBar').innerHTML = `
         <div class="stat"><div class="label">💰 现金</div>
             <div class="value cash">$${Player.cash}</div></div>
-        <div class="stat"><div class="label">⭐ 尊严</div>
-            <div class="value dignity">${Player.dignity}</div></div>
         <div class="stat"><div class="label">💸 债务</div>
             <div class="value debt">$${Player.debt}</div></div>
         <div class="stat"><div class="label">📅 天数</div>
@@ -436,15 +434,15 @@ function doBeg() {
     if (r < 0.2) {
         const lost = Player.cash;
         Player.cash = 0;
-        Player.dignity = Math.max(0, Player.dignity - 5);
+        
         log('🪱 被同行抢光 $' + lost + '！尊严-5', 'lose');
     } else if (r < 0.5) {
-        Player.dignity = Math.max(0, Player.dignity - 1);
+        
         log('🪱 啥也没讨到，尊严-1', 'lose');
     } else {
         const earned = Math.floor(Math.random() * 5) + 1;
         Player.cash += earned;
-        Player.dignity = Math.max(0, Player.dignity - 2);
+        
         log('🪱 讨到 $' + earned + '，尊严-2', 'win');
     }
     saveGame();
@@ -658,7 +656,6 @@ function repayLoan() {
     document.head.appendChild(style);
 })();
 
-
 // ============================================================
 // 炒期货
 // ============================================================
@@ -714,7 +711,7 @@ function closeFutures() {
     let total = Math.floor(futuresPositions.amount + pnl - fee);
     if (total<0) total=0;
     addCash(total);
-    if(pnl>0){addDignity(3);log("📊 平仓 盈利 $"+Math.floor(pnl)+" 手续费$"+fee+" 尊严+3","win")}else{log("📊 平仓 亏损 $"+Math.floor(-pnl)+" 手续费$"+fee,"lose")}
+    if(pnl>0){log("📊 平仓 盈利 $"+Math.floor(pnl)+" 手续费$"+fee+" ","win")}else{log("📊 平仓 亏损 $"+Math.floor(-pnl)+" 手续费$"+fee,"lose")}
     futuresPositions = null;
     showFutures();
 }
