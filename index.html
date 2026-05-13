@@ -471,7 +471,7 @@ function passDay() {
         log('⏭ 第 ' + Player.day + ' 天，平安无事', 'info');
     }
     // 债务逾期惩罚
-    if (Player.loanActive && Player.loanDays > Player.loanMaxDays + 5) {
+    if (Player.loanActive && Player.loanDays > Player.loanMaxDays) {
         if (Player.cash >= Player.debt) {
             // 现金够还债 → 债主抢光所有现金
             log('🔥 债主上门！抢光了所有现金 $' + Player.cash + '！', 'lose');
