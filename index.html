@@ -251,7 +251,11 @@ const Player = saved || {
     loanDays: 0,
     loanMaxDays: 0,
     workCount: 0,   // 今日打工次数
-    day: 1          // 游戏天数
+    day: 1,          // 游戏天数
+    captured: false, // 是否被抓
+    capturedDebt: 0  // 被抓时的欠款
+    captured: false, // 是否被抓
+    capturedDebt: 0  // 被抓时的欠款
 };
 
 // ============================================================
@@ -317,6 +321,40 @@ function addCash(amount) {
 // ============================================================
 // 4. 主菜单
 // ============================================================
+
+function showCaptured() {
+    let h = '<h2>⛓️ 被抓走了！</h2>';
+    h += '<p style="color:#e94560;">你欠债不还，被债主抓去洗盘子了！</p>';
+    h += '<p>还欠 <b style="color:#e94560;">$' + Player.capturedDebt + '</b>，每次洗盘子赚 $10</p>';
+    h += '<p>已偿还：<b style="color:#4ecca3;">$' + (Player.debt - Player.capturedDebt) + '</b></p>';
+    h += '<button class="btn btn-lose" onclick="washDishes()">🍽️ 洗盘子 ($10)</button>';
+    $('gameArea').innerHTML = h;
+}
+
+function washDishes() {
+    Player.capturedDebt -= 10;
+    Player.cash += 10;
+    if (Player.capturedDebt <= 0) {
+        // 还清了！
+        let refund = -Player.capturedDebt;
+        Player.capturedDebt = 0;
+        Player.loanActive = false;
+        Player.loanAmount = 0;
+        Player.loanDays = 0;
+        Player.debt = 0;
+        Player.captured = false;
+        if (refund > 0) Player.cash += refund;
+        saveGame();
+        updateStatus();
+        log('🎉 终于还清了债主的钱，重获自由！', 'win');
+        showMenu();
+    } else {
+        saveGame();
+        updateStatus();
+        showCaptured();
+        log('🍽️ 洗了盘子，还剩 $' + Player.capturedDebt, 'info');
+    }
+}
 
 function showMenu() {
     let html = '<h2>🎰 赌博模拟器</h2>';
@@ -420,9 +458,29 @@ function passDay() {
     } else {
         log('⏭ 第 ' + Player.day + ' 天，平安无事', 'info');
     }
+    // 债务逾期惩罚
+    if (Player.loanActive && Player.loanDays > Player.loanMaxDays) {
+        if (Player.cash >= Player.debt) {
+            // 现金够还债 → 债主抢光所有现金
+            log('🔥 债主上门！抢光了所有现金 $' + Player.cash + '！', 'lose');
+            Player.cash = 0;
+            Player.loanActive = false;
+            Player.loanAmount = 0;
+            Player.loanDays = 0;
+            Player.debt = 0;
+        } else {
+            // 现金不够 → 被抓走！只能洗盘子还债
+            log('⛓️ 债主上门！钱不够还，被抓去洗盘子了！', 'lose');
+            Player.captured = true;
+            Player.capturedDebt = Player.debt;
+            Player.cash = 0;
+        }
+    }
     saveGame();
     updateStatus();
-    showMenu();
+    // 如果被抓了，显示洗盘子界面
+    if (Player.captured) { showCaptured(); }
+    else { showMenu(); }
 }
 
 // ============================================================
