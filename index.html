@@ -633,7 +633,7 @@
                     • 每人发2张底牌 + 5张公共牌，从7张中挑最好的5张比大小<br>
                     • 下注轮次：翻牌前 → 翻牌(3张) → 转牌(1张) → 河牌(1张) → 摊牌<br>
                     • 你的操作：<span style="color:#4ecca3;">过牌</span> / <span style="color:#e94560;">跟注</span> / <span style="color:#f5a623;">加注</span> / <span style="color:#e94560;">弃牌</span><br>
-                    • AI弃牌时会亮出底牌，方便你学习判断！<br>
+                    • AI只有在摊牌时才亮牌，真实德州体验！<br>
                     <b style="color:#f5a623;">💡 新手提示：</b>起手有A、K、一对的时候就大胆跟！2和7这种烂牌直接弃。
                 </div>
 
@@ -762,7 +762,7 @@
             for (let i = 0; i < 3; i++) {
                 const folded = s.folded[i+1] ? ' [弃牌]' : '';
                 const bet = s.aiBets[i+1] > 0 ? `下注: $${s.aiBets[i+1]}` : '';
-                const handDisplay = (s.stage === 'river' || s.folded[i+1]) && s.aiHands[i] ?
+                const handDisplay = s.roundOver && s.aiHands[i] ?
                     `<span style="font-size:11px;">${s.aiHands[i].map(c => `<span style="color:${c.suit === '♥' || c.suit === '♦' ? '#e94560' : '#eee'};">${c.display}</span>`).join(' ')}</span>` :
                     '🂠🂠';
                 html += `<div style="text-align:center;font-size:12px;">
