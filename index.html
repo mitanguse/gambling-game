@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>赌博模拟�?🎰</title>
+    <title>赌博模拟器 🎰</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -16,14 +16,9 @@
             min-height: 100vh;
         }
         .status-bar {
-            background: #16213e;
-            border-radius: 10px;
-            padding: 12px;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-            margin-bottom: 12px;
-            border: 1px solid #0f3460;
+            background: #16213e; border-radius: 10px; padding: 12px;
+            display: grid; grid-template-columns: 1fr 1fr;
+            gap: 8px; margin-bottom: 12px; border: 1px solid #0f3460;
         }
         .stat-item { text-align: center; font-size: 14px; }
         .stat-item .label { color: #888; font-size: 11px; }
@@ -32,15 +27,10 @@
         .stat-item .value.debt { color: #e94560; }
         .stat-item .value.dignity { color: #f5a623; }
         .game-area {
-            background: #16213e;
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 12px;
-            border: 1px solid #0f3460;
-            min-height: 200px;
+            background: #16213e; border-radius: 10px; padding: 15px;
+            margin-bottom: 12px; border: 1px solid #0f3460; min-height: 200px;
         }
         h2 { font-size: 16px; color: #4ecca3; margin-bottom: 10px; text-align: center; }
-        h3 { font-size: 14px; color: #f5a623; margin: 10px 0 6px; }
         p, .desc { font-size: 13px; color: #ccc; margin-bottom: 8px; line-height: 1.5; }
         .btn {
             background: #0f3460; color: #eee; border: none; padding: 10px 18px;
@@ -49,14 +39,10 @@
         .btn:hover { background: #1a5276; }
         .btn:active { transform: scale(0.96); }
         .btn.primary { background: #e94560; }
-        .btn.primary:hover { background: #c73650; }
         .btn.success { background: #4ecca3; color: #1a1a2e; }
-        .btn.success:hover { background: #3db88f; }
         .btn.warning { background: #f5a623; color: #1a1a2e; }
-        .btn.warning:hover { background: #d4911c; }
         .btn.danger { background: #e94560; }
         .btn.small { padding: 6px 12px; font-size: 12px; }
-        .btn:disabled { opacity: 0.4; cursor: not-allowed; }
         .menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
         .menu-btn {
             background: #0f3460; border: 1px solid #1a5276; border-radius: 8px;
@@ -82,808 +68,341 @@
         .loan-table { width: 100%; border-collapse: collapse; font-size: 12px; margin: 8px 0; }
         .loan-table th, .loan-table td { border: 1px solid #333; padding: 6px; text-align: center; }
         .loan-table th { background: #0f3460; }
-        input[type="number"] {
+        input[type="number"], select {
             background: #0a0a1a; border: 1px solid #333; color: #eee;
             padding: 8px; border-radius: 6px; width: 100px; font-size: 14px;
-        }
-        select {
-            background: #0a0a1a; border: 1px solid #333; color: #eee;
-            padding: 8px; border-radius: 6px; font-size: 14px;
         }
         .back-btn { display: block; margin: 10px auto 0; }
     </style>
 </head>
 <body>
-
-    <div class="status-bar" id="statusBar">
-        <div class="stat-item">
-            <div class="label">💰 现金</div>
-            <div class="value cash" id="cashDisplay">$50</div>
-        </div>
-        <div class="stat-item">
-            <div class="label">�?尊严</div>
-            <div class="value dignity" id="dignityDisplay">100</div>
-        </div>
-        <div class="stat-item">
-            <div class="label">💸 债务</div>
-            <div class="value debt" id="debtDisplay">$0</div>
-        </div>
-        <div class="stat-item">
-            <div class="label">📅 天数</div>
-            <div class="value" id="dayDisplay">1</div>
-        </div>
+    <div class="status-bar">
+        <div class="stat-item"><div class="label">现金</div><div class="value cash" id="cashDisplay">$50</div></div>
+        <div class="stat-item"><div class="label">尊严</div><div class="value dignity" id="dignityDisplay">100</div></div>
+        <div class="stat-item"><div class="label">债务</div><div class="value debt" id="debtDisplay">$0</div></div>
+        <div class="stat-item"><div class="label">天数</div><div class="value" id="dayDisplay">1</div></div>
     </div>
-
     <div class="game-area" id="gameArea">
         <div id="mainMenu">
-            <h2>🎰 赌博模拟�?/h2>
-            <p class="desc" id="menuDesc">从身无分文开始，靠运气和胆量逆天改命——或者输光一切�?/p>
+            <h2>赌博模拟器</h2>
+            <p class="desc" id="menuDesc">从身无分文开始，靠运气和胆量逆天改命。</p>
             <div class="menu-grid" id="menuGrid"></div>
         </div>
     </div>
-
     <div class="log-area" id="logArea">
-        <div class="info">🎲 欢迎来到赌博模拟器！选一个玩法开始吧�?/div>
+        <div class="info">欢迎来到赌博模拟器！选一个玩法开始吧。</div>
     </div>
+<script>
+var player={cash:50,dignity:100,debt:0,loanActive:false,loanAmount:0,loanDay:0,loanMaxDays:0,dailyWorkCount:0,gameDay:1};
+var MAX_DAILY_WORK=5;
+var JOBS=[{name:'便利店收银',pay:10},{name:'洗碗工',pay:15},{name:'搬砖',pay:25},{name:'清洁工',pay:12}];
+var LOANS=[{level:'小额',amount:500,dailyRate:0.05,maxDays:7},{level:'中额',amount:2000,dailyRate:0.08,maxDays:14},{level:'大额',amount:5000,dailyRate:0.12,maxDays:30}];
+var DICE_ODDS={2:{prob:1/36,multi:30,label:'30'},3:{prob:2/36,multi:15,label:'15'},4:{prob:3/36,multi:10,label:'10'},5:{prob:4/36,multi:7,label:'7'},6:{prob:5/36,multi:6,label:'6'},7:{prob:6/36,multi:5,label:'5'},8:{prob:5/36,multi:6,label:'6'},9:{prob:4/36,multi:7,label:'7'},10:{prob:3/36,multi:10,label:'10'},11:{prob:2/36,multi:15,label:'15'},12:{prob:1/36,multi:30,label:'30'}};
+var GAMES=[
+{id:'dice',name:'赌大小',icon:'🎲',desc:'2颗骰子押点数',unlockCash:0,unlockDignity:0},
+{id:'scratch',name:'刮刮乐',icon:'🎫',desc:'即买即刮',unlockCash:0,unlockDignity:0},
+{id:'pinball',name:'弹珠机',icon:'🕹',desc:'弹珠落洞',unlockCash:0,unlockDignity:0},
+{id:'work',name:'打工',icon:'💼',desc:'限5次/天',unlockCash:0,unlockDignity:0},
+{id:'beg',name:'乞讨',icon:'🪱',desc:'最后的活路',unlockCash:0,unlockDignity:0},
+{id:'loan',name:'借钱',icon:'💰',desc:'高利贷利滚利',unlockCash:0,unlockDignity:0},
+{id:'poker',name:'德州扑克',icon:'🃏',desc:'与AI对赌',unlockCash:500,unlockDignity:30},
+{id:'horse',name:'赌马',icon:'🐎',desc:'赛马下注',unlockCash:2000,unlockDignity:40},
+{id:'soccer',name:'赌球',icon:'⚽',desc:'押比赛结果',unlockCash:2000,unlockDignity:40},
+{id:'futures',name:'炒期货',icon:'📈',desc:'杠杆交易',unlockCash:10000,unlockDignity:50}
+];
 
-    <script>
-        const player = {
-            cash: 50,
-            dignity: 100,
-            debt: 0,
-            loanActive: false,
-            loanAmount: 0,
-            loanDay: 0,
-            loanMaxDays: 0,
-            dailyWorkCount: 0,
-            gameDay: 1
-        };
+function $(id){return document.getElementById(id)}
+function updateUI(){
+$('cashDisplay').textContent='$'+player.cash;
+$('dignityDisplay').textContent=player.dignity;
+$('debtDisplay').textContent=player.debt>0?'$'+player.debt:'$0';
+$('dayDisplay').textContent=player.gameDay;
+}
+function log(msg,t){
+var a=$('logArea'),d=document.createElement('div');d.className=t||'info';
+d.textContent='> '+msg;a.appendChild(d);a.scrollTop=a.scrollHeight;
+}
 
-        const MAX_DAILY_WORK = 5;
-        const JOBS = [
-            { name: '便利店收�?, pay: 10 },
-            { name: '洗碗�?,     pay: 15 },
-            { name: '搬砖',       pay: 25 },
-            { name: '清洁�?,     pay: 12 }
-        ];
-        const LOANS = [
-            { level: '小额', amount: 500,  dailyRate: 0.05, maxDays: 7 },
-            { level: '中额', amount: 2000, dailyRate: 0.08, maxDays: 14 },
-            { level: '大额', amount: 5000, dailyRate: 0.12, maxDays: 30 }
-        ];
+function showMenu(){
+var a=$('gameArea');
+a.innerHTML='<h2>赌博模拟器</h2><p>现金: $'+player.cash+' | 尊严: '+player.dignity+' | 债务: $'+player.debt+'</p><div class="menu-grid" id="menuGrid"></div>';
+var g=$('menuGrid');
+GAMES.forEach(function(game){
+var b=document.createElement('div');b.className='menu-btn';
+var ck=player.cash>=game.unlockCash,dk=player.dignity>=game.unlockDignity,ld=!ck||!dk;
+if(ld)b.classList.add('locked');
+b.innerHTML='<span class="icon">'+game.icon+'</span>'+game.name+'<br><small>'+game.desc+'</small>';
+b.onclick=function(){
+if(ld){var r='';if(player.cash<game.unlockCash)r+='需要$'+game.unlockCash+' ';if(player.dignity<game.unlockDignity)r+='需要尊严'+game.unlockDignity;log(r,'lose');return;}
+switch(game.id){
+case'dice':showDice();break;case'scratch':showScratch();break;case'pinball':showPinball();break;
+case'work':showWork();break;case'beg':doBeg();break;case'loan':showLoan();break;
+case'poker':showPoker();break;default:log('还没做好','info');
+}
+};
+g.appendChild(b);
+});
+}
 
-        const DICE_ODDS = {
-            2:  { prob: 1/36,  multi: 30, label: '�?0�? },
-            3:  { prob: 2/36,  multi: 15, label: '�?5�? },
-            4:  { prob: 3/36,  multi: 10, label: '�?0�? },
-            5:  { prob: 4/36,  multi: 7,  label: '�?�? },
-            6:  { prob: 5/36,  multi: 6,  label: '�?�? },
-            7:  { prob: 6/36,  multi: 5,  label: '�?�? },
-            8:  { prob: 5/36,  multi: 6,  label: '�?�? },
-            9:  { prob: 4/36,  multi: 7,  label: '�?�? },
-            10: { prob: 3/36,  multi: 10, label: '�?0�? },
-            11: { prob: 2/36,  multi: 15, label: '�?5�? },
-            12: { prob: 1/36,  multi: 30, label: '�?0�? }
-        };
+function doBeg(){
+var r=Math.random();
+if(r<0.2){var l=player.cash;player.cash=0;player.dignity=Math.max(0,player.dignity-5);log('被抢光$'+l+' 尊严-5','lose');}
+else if(r<0.5){player.dignity=Math.max(0,player.dignity-1);log('啥也没讨到 尊严-1','lose');}
+else{var e=Math.floor(Math.random()*5)+1;player.cash+=e;player.dignity=Math.max(0,player.dignity-2);log('讨到$'+e+' 尊严-2','win');}
+updateUI();showMenu();
+}
 
-        const GAMES = [
-            { id: 'dice',    name: '赌大�?,   icon: '🎲', desc: '2颗骰子，押点数赢�?, unlockCash: 0, unlockDignity: 0 },
-            { id: 'scratch', name: '刮刮�?,   icon: '🎫', desc: '即买即刮，一夜暴�?,   unlockCash: 0, unlockDignity: 0 },
-            { id: 'pinball', name: '弹珠�?,   icon: '🕹', desc: '弹珠落洞赢奖�?,       unlockCash: 0, unlockDignity: 0 },
-            { id: 'work',    name: '打工',     icon: '💼', desc: '体力活赚钱（�?�?天）', unlockCash: 0, unlockDignity: 0 },
-            { id: 'beg',     name: '乞讨',     icon: '🪱', desc: '最后的活路',           unlockCash: 0, unlockDignity: 0 },
-            { id: 'loan',    name: '借钱',     icon: '💰', desc: '高利贷，利滚�?,       unlockCash: 0, unlockDignity: 0 },
-            { id: 'poker',   name: '德州扑克', icon: '🃏', desc: '与AI对赌',             unlockCash: 500, unlockDignity: 30 },
-            { id: 'horse',   name: '赌马',     icon: '🐎', desc: '赛马下注',             unlockCash: 2000, unlockDignity: 40 },
-            { id: 'soccer',  name: '赌球',     icon: '�?, desc: '押比赛结�?,           unlockCash: 2000, unlockDignity: 40 },
-            { id: 'futures', name: '炒期�?,   icon: '📈', desc: '杠杆交易',             unlockCash: 10000, unlockDignity: 50 }
-        ];
+function showWork(){
+var a=$('gameArea'),h='<h2>打工</h2><p>今日'+player.dailyWorkCount+'/'+MAX_DAILY_WORK+'次</p>';
+if(player.dailyWorkCount>=MAX_DAILY_WORK){h+='<p>太累了不能再打工</p><button class="btn" onclick="passDay()">过一天</button>';}
+else{
+JOBS.forEach(function(j){h+='<button class="btn success" onclick="doWork('+j.pay+')">'+j.name+' $'+j.pay+'</button> ';});
+}
+h+='<br><button class="btn" onclick="showMenu()">返回</button>';a.innerHTML=h;
+}
+function doWork(p){
+if(player.dailyWorkCount>=MAX_DAILY_WORK)return;
+player.cash+=p;player.dailyWorkCount++;log('赚了$'+p,'win');updateUI();showWork();
+}
+function passDay(){
+player.gameDay++;player.dailyWorkCount=0;
+if(player.loanActive){
+player.loanDay++;var o=Math.floor(player.loanAmount*Math.pow(1.05,player.loanDay));player.debt=o;
+if(player.loanDay>player.loanMaxDays)log('逾期！债主上门！','lose');
+else log('第'+player.gameDay+'天 债务$'+o,'lose');
+}else log('第'+player.gameDay+'天 平安无事','info');
+updateUI();showMenu();
+}
 
-        function updateUI() {
-            document.getElementById('cashDisplay').textContent = '$' + player.cash;
-            document.getElementById('dignityDisplay').textContent = player.dignity;
-            document.getElementById('debtDisplay').textContent = player.debt > 0 ? '$' + player.debt : '$0';
-            document.getElementById('dayDisplay').textContent = player.gameDay;
-        }
+function showDice(){
+var a=$('gameArea'),o='';
+for(var n=2;n<=12;n++)o+='<option value="'+n+'">'+n+'点('+DICE_ODDS[n].label+'倍)</option>';
+a.innerHTML='<h2>赌大小</h2><p>最低$5</p><div class="dice-area"><div class="dice" id="d1">?</div><div class="dice" id="d2">?</div></div><p>押<select id="dB">'+o+'</select> 下注$<input type="number" id="dA" value="5" min="5"></p><button class="btn primary" onclick="rollDice()">掷骰子</button><button class="btn" onclick="showMenu()">返回</button>';
+}
+function rollDice(){
+var b=parseInt($('dA').value),g=parseInt($('dB').value);
+if(b<5||b>player.cash){log('无效','lose');return;}
+var d1=Math.floor(Math.random()*6)+1,d2=Math.floor(Math.random()*6)+1,s=d1+d2;
+$('d1').textContent=d1;$('d2').textContent=d2;
+if(s===g){var w=b*DICE_ODDS[s].multi;player.cash+=w;log('中了$'+w+'!','win');}
+else{player.cash-=b;log('输了$'+b,'lose');}
+updateUI();
+}
 
-        function addLog(msg, type = 'info') {
-            const logArea = document.getElementById('logArea');
-            const div = document.createElement('div');
-            div.className = type;
-            div.textContent = '�?' + msg;
-            logArea.appendChild(div);
-            logArea.scrollTop = logArea.scrollHeight;
-        }
+function showScratch(){
+$('gameArea').innerHTML='<h2>刮刮乐</h2><p>每张$5</p><p style="font-size:30px;text-align:center" id="sR">🎫</p><button class="btn warning" onclick="buyScratch()">买一张</button><button class="btn" onclick="showMenu()">返回</button>';
+}
+function buyScratch(){
+if(player.cash<5){log('没钱了','lose');return;}
+player.cash-=5;var r=Math.random(),p=0,m='';
+if(r<0.01){p=100;m='头奖$100!!';}else if(r<0.05){p=20;m='$20!';}else if(r<0.20){p=6;m='$6';}else if(r<0.40){p=1;m='$1';}else{m='没中';}
+player.cash+=p;$('sR').textContent=p>0?'$'+p:'没中';log(m,p>0?'win':'lose');updateUI();
+}
 
-        function showMainMenu() {
-            const area = document.getElementById('gameArea');
-            area.innerHTML = `
-                <div id="mainMenu">
-                    <h2>🎰 赌博模拟�?/h2>
-                    <p class="desc">现金: $${player.cash} | 尊严: ${player.dignity} | 债务: $${player.debt}</p>
-                    <div class="menu-grid" id="menuGrid"></div>
-                </div>
-            `;
-            const grid = document.getElementById('menuGrid');
-            GAMES.forEach(game => {
-                const btn = document.createElement('div');
-                btn.className = 'menu-btn';
-                const cashOk = player.cash >= game.unlockCash;
-                const dignityOk = player.dignity >= game.unlockDignity;
-                const locked = !cashOk || !dignityOk;
-                if (locked) btn.classList.add('locked');
-                btn.innerHTML = `<span class="icon">${game.icon}</span>${game.name}<br><small>${game.desc}</small>`;
-                btn.onclick = () => {
-                    if (locked) {
-                        let reason = '🔒 未解锁：';
-                        if (player.cash < game.unlockCash) reason += \`需要现�?$\${game.unlockCash}，\`;
-                        if (player.dignity < game.unlockDignity) reason += \`需要尊�?\${game.unlockDignity}，\`;
-                        addLog(reason.slice(0, -1), 'lose');
-                        return;
-                    }
-                    switch (game.id) {
-                        case 'dice':    showDiceGame(); break;
-                        case 'scratch': showScratchGame(); break;
-                        case 'pinball': showPinballGame(); break;
-                        case 'work':    showWorkMenu(); break;
-                        case 'beg':     doBeg(); break;
-                        case 'loan':    showLoanMenu(); break;
-                        case 'poker':   showPokerGame(); break;
-                        default: addLog(game.name + ' 还没做好，等等更新～', 'info');
-                    }
-                };
-                grid.appendChild(btn);
-            });
-        }
+function showPinball(){
+$('gameArea').innerHTML='<h2>弹珠机</h2><p>$5一次</p><p style="text-align:center;font-size:40px" id="pR">🎯</p><button class="btn primary" onclick="playPinball()">投弹</button><button class="btn" onclick="showMenu()">返回</button>';
+}
+function playPinball(){
+if(player.cash<5){log('没钱','lose');return;}
+player.cash-=5;
+var h=[{r:0.05,p:30,n:'中心大奖'},{r:0.10,p:12,n:'蓝洞'},{r:0.20,p:5,n:'绿洞'},{r:0.30,p:2,n:'黄洞'},{r:0.35,p:0,n:'空洞'}];
+var ra=Math.random(),cu=0,re=h[h.length-1];
+for(var i=0;i<h.length;i++){cu+=h[i].r;if(ra<cu){re=h[i];break;}}
+if(re.p>0){player.cash+=re.p;$('pR').textContent=re.n;log('进了'+re.n+' $'+re.p,'win');}
+else{$('pR').textContent='没中';log('空洞','lose');}
+updateUI();
+}
 
-        function doBeg() {
-            const roll = Math.random();
-            if (roll < 0.2) {
-                const lost = player.cash;
-                player.cash = 0;
-                player.dignity = Math.max(0, player.dignity - 5);
-                addLog('🪱 乞讨时被其他乞丐抢光�?$' + lost + '！尊�?5', 'lose');
-            } else if (roll < 0.5) {
-                player.dignity = Math.max(0, player.dignity - 1);
-                addLog('🪱 蹲了一天，一分钱都没讨到……尊�?1', 'lose');
-            } else {
-                const earned = Math.floor(Math.random() * 5) + 1;
-                player.cash += earned;
-                player.dignity = Math.max(0, player.dignity - 2);
-                addLog('🪱 讨到�?$' + earned + '，但尊严-2', 'win');
-            }
-            updateUI();
-            showMainMenu();
-        }
+function showLoan(){
+var a=$('gameArea'),h='<h2>高利贷</h2>';
+if(player.loanActive){var o=Math.floor(player.loanAmount*Math.pow(1.05,player.loanDay));h+='<p style="color:#e94560">欠款$'+o+' ('+player.loanDay+'/'+player.loanMaxDays+'天)</p><button class="btn primary" onclick="repay()">还清$'+o+'</button><button class="btn" onclick="passDay()">过一天</button>';}
+else{h+='<table class="loan-table"><tr><th>级别</th><th>额度</th><th>日息</th><th>期限</th></tr>';
+for(var i=0;i<LOANS.length;i++){h+='<tr><td>'+LOANS[i].level+'</td><td>$'+LOANS[i].amount+'</td><td>'+(LOANS[i].dailyRate*100)+'%</td><td>'+LOANS[i].maxDays+'天</td></tr>';}
+h+='</table>';for(var i=0;i<LOANS.length;i++)h+='<button class="btn warning" onclick="takeLoan('+i+')">借$'+LOANS[i].amount+'</button> ';
+}
+h+='<br><button class="btn" onclick="showMenu()">返回</button>';a.innerHTML=h;
+}
+function takeLoan(i){
+if(player.loanActive){log('已有贷款','lose');return;}
+player.cash+=LOANS[i].amount;player.loanActive=true;player.loanAmount=LOANS[i].amount;player.loanDay=0;player.loanMaxDays=LOANS[i].maxDays;player.debt=LOANS[i].amount;
+updateUI();log('借了$'+LOANS[i].amount,'info');showMenu();
+}
+function repay(){
+var o=Math.floor(player.loanAmount*Math.pow(1.05,player.loanDay));
+if(player.cash<o){log('不够钱','lose');return;}
+player.cash-=o;player.loanActive=false;player.loanAmount=0;player.loanDay=0;player.debt=0;
+updateUI();log('还清了！','win');showMenu();
+}
 
-        function showWorkMenu() {
-            const area = document.getElementById('gameArea');
-            let html = '<h2>💼 打工</h2>';
-            html += '<p>今日已打工：' + player.dailyWorkCount + '/' + MAX_DAILY_WORK + ' �?/p>';
-            if (player.dailyWorkCount >= MAX_DAILY_WORK) {
-                html += '<p class="desc" style="color:#e94560;">😴 今天太累了，不能再打工了！过一天再来吧�?/p>';
-                html += '<button class="btn" onclick="passDay()">�?过一�?/button>';
-                html += '<button class="btn back-btn" onclick="showMainMenu()">�?返回</button>';
-                area.innerHTML = html;
-                return;
-            }
-            JOBS.forEach(job => {
-                html += '<button class="btn success" onclick="doWork(' + job.pay + ')">' + job.name + ' �?$' + job.pay + '</button> ';
-            });
-            html += '<br><button class="btn back-btn" onclick="showMainMenu()">�?返回</button>';
-            area.innerHTML = html;
-        }
+// Texas Hold'em Poker
+var SUITS=['♠','♥','♦','♣'],RANKS=['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+var AI_NAMES=['老狐狸','小白兔','秃鹫'],AI_LEVELS=['高手','菜鸡','普通'];
+var ps={};
 
-        function doWork(pay) {
-            if (player.dailyWorkCount >= MAX_DAILY_WORK) {
-                addLog('今天不能再打工了�?, 'lose');
-                return;
-            }
-            player.cash += pay;
-            player.dailyWorkCount++;
-            addLog('💼 打工赚了 $' + pay + ' 💪', 'win');
-            updateUI();
-            showWorkMenu();
-        }
+function newDeck(){
+var d=[];
+for(var s=0;s<SUITS.length;s++)for(var r=0;r<RANKS.length;r++)d.push({rank:RANKS[r],ri:r,suit:SUITS[s],d:RANKS[r]+SUITS[s]});
+for(var i=d.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=d[i];d[i]=d[j];d[j]=t;}
+return d;
+}
 
-        function passDay() {
-            player.gameDay++;
-            player.dailyWorkCount = 0;
-            if (player.loanActive) {
-                player.loanDay++;
-                const owed = Math.floor(player.loanAmount * Math.pow(1 + 0.05, player.loanDay));
-                player.debt = owed;
-                if (player.loanDay > player.loanMaxDays) {
-                    addLog('💀 逾期了！！债主上门！游戏结束！', 'lose');
-                } else {
-                    addLog('�?�? + player.gameDay + '天，债务滚到 $' + owed, 'lose');
-                }
-            } else {
-                addLog('�?�? + player.gameDay + '天，平安无事', 'info');
-            }
-            updateUI();
-            showMainMenu();
-        }
+function evalHand(c){
+var r=c.map(function(x){return x.ri}).sort(function(a,b){return a-b});
+var su=c.map(function(x){return x.suit});
+var sc={};su.forEach(function(x){sc[x]=(sc[x]||0)+1});
+var fl=Object.keys(sc).some(function(x){return sc[x]>=5});
+var rc={};r.forEach(function(x){rc[x]=(rc[x]||0)+1});
+var ct=Object.values(rc).sort(function(a,b){return b-a});
+var ur=Object.keys(rc).map(Number).sort(function(a,b){return b-a});
+var st=false,sh=0;
+var us=[...new Set(r)].sort(function(a,b){return a-b});
+for(var i=0;i<=us.length-5;i++){if(us[i+4]-us[i]===4){st=true;sh=us[i+4];break;}}
+if(us.includes(12)&&us.includes(0)&&us.includes(1)&&us.includes(2)&&us.includes(3)){st=true;sh=3;}
+if(fl&&st&&sh===12)return{rank:9,name:'RF',high:sh};
+if(fl&&st)return{rank:8,name:'SF',high:sh};
+if(ct[0]===4)return{rank:7,name:'4ok',high:ur.find(function(x){return rc[x]===4})};
+if(ct[0]===3&&ct[1]>=2)return{rank:6,name:'FH',high:ur.find(function(x){return rc[x]===3})};
+if(fl)return{rank:5,name:'FL',high:ur[0]};
+if(st)return{rank:4,name:'ST',high:sh};
+if(ct[0]===3)return{rank:3,name:'TK',high:ur.find(function(x){return rc[x]===3})};
+if(ct[0]===2&&ct[1]===2)return{rank:2,name:'2P',high:ur.filter(function(x){return rc[x]===2}).sort(function(a,b){return b-a})[0]};
+if(ct[0]===2)return{rank:1,name:'1P',high:ur.find(function(x){return rc[x]===2})};
+return{rank:0,name:'HC',high:ur[0]};
+}
 
-        function showDiceGame() {
-            const area = document.getElementById('gameArea');
-            let opts = '';
-            for (let n = 2; n <= 12; n++) {
-                const odds = DICE_ODDS[n];
-                opts += '<option value="' + n + '">' + n + '�?(' + odds.label + ')</option>';
-            }
-            area.innerHTML = `
-                <h2>🎲 赌大�?/h2>
-                <p>两个骰子点数相加，押中了按赔率赢钱！最低下�?$5</p>
-                <p style="color:#f5a623;font-size:11px;">�?概率对庄家有利，长期必输</p>
-                <div class="dice-area">
-                    <div class="dice" id="dice1">?</div>
-                    <div class="dice" id="dice2">?</div>
-                </div>
-                <p>
-                    押点数：<select id="diceBet">${opts}</select>
-                    下注�?<input type="number" id="diceAmount" value="5" min="5" max="1000">
-                </p>
-                <button class="btn primary" onclick="rollDice()">🎲 掷骰�?/button>
-                <button class="btn back-btn" onclick="showMainMenu()">�?返回</button>
-            `;
-        }
+function aiAct(lv,hand,com,pot,cb,chip,ab){
+var ev=evalHand([...hand,...com]),st=ev.rank+ev.high/100,r=Math.random(),tc=cb-ab;
+switch(lv){
+case'高手':if(st>4.5)return r<0.7?{a:'r',am:Math.floor(pot*(0.5+r*0.5))+tc}:{a:'c'};
+else if(st>2){if(tc===0)return{a:'k'};return tc/pot<0.2?{a:'c'}:{a:'f'};}
+else{if(r<0.15)return{a:'r',am:Math.floor(pot*0.5)+(tc>0?tc:0)};if(tc===0)return{a:'k'};return tc/pot>0.3?{a:'c'}:{a:'f'};}
+case'普通':if(st>5)return r<0.4?{a:'r',am:Math.floor(pot*0.3)+tc}:{a:'c'};
+else if(st>2){if(tc===0)return{a:'k'};return tc/pot<0.3?{a:'c'}:{a:'f'};}
+else{if(tc<=0||r<0.05)return{a:'k'};return{a:'f'};}
+default:if(st>5)return r<0.5?{a:'c'}:{a:'r',am:Math.floor(pot*0.2)+tc};
+else if(st>2){if(tc===0)return{a:'k'};return r<0.4?{a:'c'}:{a:'f'};}
+else{if(tc===0)return{a:'k'};return r<0.2?{a:'c'}:{a:'f'};}
+}
+}
 
-        function rollDice() {
-            const bet = parseInt(document.getElementById('diceAmount').value);
-            const guess = parseInt(document.getElementById('diceBet').value);
-            if (bet < 5) { addLog('最少下�?$5�?, 'lose'); return; }
-            if (bet > player.cash) { addLog('现金不够�?, 'lose'); return; }
-            const d1 = Math.floor(Math.random() * 6) + 1;
-            const d2 = Math.floor(Math.random() * 6) + 1;
-            const sum = d1 + d2;
-            document.getElementById('dice1').textContent = d1;
-            document.getElementById('dice2').textContent = d2;
-            const odds = DICE_ODDS[sum];
-            if (sum === guess) {
-                const win = bet * odds.multi;
-                player.cash += win;
-                updateUI();
-                addLog('🎲 点数 ' + sum + '，押中了！！赢了 $' + win + '！（' + odds.multi + '倍）', 'win');
-            } else {
-                player.cash -= bet;
-                updateUI();
-                addLog('🎲 点数 ' + sum + '，押 ' + guess + ' 没中……输�?$' + bet, 'lose');
-            }
-        }
+var HAND_NAMES={RF:'皇家同花顺',SF:'同花顺','4ok':'四条',FH:'葫芦',FL:'同花',ST:'顺子',TK:'三条','2P':'两对','1P':'一对',HC:'高牌'};
 
-        function showScratchGame() {
-            const area = document.getElementById('gameArea');
-            area.innerHTML = `
-                <h2>🎫 刮刮�?/h2>
-                <p>每张 $5，刮开看中没中�?/p>
-                <p style="font-size:24px;text-align:center;margin:20px 0;" id="scratchResult">🎫</p>
-                <button class="btn warning" onclick="buyScratch()">🎫 买一�?($5)</button>
-                <button class="btn back-btn" onclick="showMainMenu()">�?返回</button>
-            `;
-        }
+function showPoker(){
+$('gameArea').innerHTML='<h2>德州扑克</h2><div style="background:#0a0a1a;border-radius:6px;padding:10px;margin-bottom:10px;font-size:12px;color:#ccc;"><b style="color:#4ecca3;">规则</b><br>每人2张底牌+5张公共牌，7选5比大小<br>轮次：翻牌前/翻牌(3张)/转牌(1张)/河牌(1张)/摊牌<br>操作：过牌/跟注/加注/弃牌<br>AI摊牌时才亮底牌</div><p style="text-align:center;font-size:13px;color:#888;">选择盲注级别开始</p><div style="display:flex;justify-content:center;gap:8px;flex-wrap:wrap;"><button class="btn success" onclick="startPoker(50)">低 $50</button><button class="btn warning" onclick="startPoker(250)">中 $250</button><button class="btn danger" onclick="startPoker(500)">高 $500</button></div><button class="btn" onclick="showMenu()">返回</button>';
+}
 
-        function buyScratch() {
-            if (player.cash < 5) { addLog('�?$5 都没有了…�?, 'lose'); return; }
-            player.cash -= 5;
-            const r = Math.random();
-            let prize = 0, msg = '';
-            if (r < 0.01) { prize = 100; msg = '💥 头奖！！！中�?$100！！'; }
-            else if (r < 0.05) { prize = 20; msg = '🎉 中了 $20！不错不错！'; }
-            else if (r < 0.20) { prize = 6; msg = '🎈 中了 $6，小赚！'; }
-            else if (r < 0.40) { prize = 1; msg = '🪙 中了 $1，算你有点运气…�?; }
-            else { msg = '😢 没中……下次一定！'; }
-            player.cash += prize;
-            document.getElementById('scratchResult').textContent = prize > 0 ? '🎉 $' + prize : '😢 没中';
-            updateUI();
-            addLog('🎫 ' + msg, prize > 0 ? 'win' : 'lose');
-        }
+function startPoker(bl){
+if(player.cash<bl*10){log('需要$'+(bl*10),'lose');return;}
+ps={blind:bl,deck:newDeck(),ph:[],ah:[],com:[],pot:0,stage:'p',pb:0,ab:[0,0,0],cb:0,fd:[false,false,false,false],ch:[bl*10,bl*10,bl*10,bl*10],acts:[],ro:false};
+var sb=Math.floor(bl/2);ps.ch[1]-=sb;ps.ch[2]-=bl;ps.ab[1]=sb;ps.ab[2]=bl;ps.cb=bl;ps.pot=sb+bl;
+ps.ph=[ps.deck.pop(),ps.deck.pop()];
+for(var i=0;i<3;i++)ps.ah.push([ps.deck.pop(),ps.deck.pop()]);
+renderPoker();
+}
 
-        function showPinballGame() {
-            const area = document.getElementById('gameArea');
-            area.innerHTML = `
-                <h2>🕹 弹珠�?/h2>
-                <p>�?$5 弹一次，弹珠落进不同洞口赢奖金！</p>
-                <p style="text-align:center;font-size:40px;margin:15px 0;" id="pinballResult">🎯</p>
-                <button class="btn primary" onclick="playPinball()">🕹 投弹 ($5)</button>
-                <button class="btn back-btn" onclick="showMainMenu()">�?返回</button>
-            `;
-        }
+function renderPoker(){
+var s=ps,a=$('gameArea');
+var pc=s.ph.map(function(c){return'<span style="color:'+(c.suit==='♥'||c.suit==='♦'?'#e94560':'#eee')+'">'+c.d+'</span>'}).join(' ');
+var cc=s.com.map(function(c){return'<span style="color:'+(c.suit==='♥'||c.suit==='♦'?'#e94560':'#eee')+'">'+c.d+'</span>'}).join(' ');
+var cd=s.com.length===0?'':cc;
+var sn={p:'翻牌前',f:'翻牌',t:'转牌',r:'河牌'};
+var h='<h2>德州扑克</h2><p style="text-align:center;font-size:12px;color:#888;">'+sn[s.stage]+' | 底池$'+s.pot+'</p>';
+h+='<div style="display:flex;justify-content:space-around;margin:8px 0;font-size:12px;">';
+for(var i=0;i<3;i++){
+var fld=s.fd[i+1]?'弃牌':'';
+var bet=s.ab[i+1]>0?'$'+s.ab[i+1]:'';
+var hd=s.ro&&s.ah[i]?s.ah[i].map(function(c){return'<span style="color:'+(c.suit==='♥'||c.suit==='♦'?'#e94560':'#eee')+'">'+c.d+'</span>'}).join(' '):'??';
+h+='<div><b>'+AI_NAMES[i]+'</b> '+fld+'<br>'+hd+'<br><small>$'+s.ch[i+1]+' '+bet+'</small></div>';
+}
+h+='</div>';
+h+='<div style="text-align:center;font-size:16px;margin:8px 0;">'+cd+'</div>';
+h+='<div style="text-align:center;font-size:16px;margin:6px 0;">'+pc+'</div>';
+h+='<p style="text-align:center;font-size:13px;">你 | $'+s.ch[0];
+if(s.pb>0)h+=' 下注$'+s.pb;
+h+='</p>';
+if(s.acts.length>0){h+='<div style="font-size:11px;color:#888;margin:6px 0;">';for(var i=Math.max(0,s.acts.length-5);i<s.acts.length;i++)h+='<div>'+s.acts[i]+'</div>';h+='</div>';}
+if(!s.ro&&!s.fd[0]&&s.ch[0]>0){
+var tc=s.cb-s.pb;
+h+='<div style="text-align:center;margin-top:8px;">';
+if(tc===0)h+='<button class="btn success small" onclick="pa(\'k\')">过牌</button> ';
+if(tc>0)h+='<button class="btn primary small" onclick="pa(\'c\')">跟注$'+tc+'</button> ';
+if(s.ch[0]>tc){var mr=Math.max(tc+Math.floor(s.blind/2),tc*2);h+='<button class="btn warning small" onclick="pa(\'r\')">加注</button> <input type="number" id="rA" value="'+Math.min(mr,s.ch[0])+'" min="'+Math.min(mr,s.ch[0])+'" max="'+s.ch[0]+'" style="width:60px;">';}
+h+=' <button class="btn danger small" onclick="pa(\'f\')">弃牌</button></div>';
+}
+if(s.ro)h+='<button class="btn primary" onclick="showPoker()" style="display:block;margin:10px auto;">再来一局</button>';
+h+='<button class="btn" onclick="showMenu()">退出</button>';
+a.innerHTML=h;
+}
 
-        function playPinball() {
-            if (player.cash < 5) { addLog('不够 $5 玩弹珠机', 'lose'); return; }
-            player.cash -= 5;
-            const holes = [
-                { rate: 0.05, prize: 30,  name: '🎯 中心大奖' },
-                { rate: 0.10, prize: 12,  name: '🔵 蓝洞' },
-                { rate: 0.20, prize: 5,   name: '🟢 绿洞' },
-                { rate: 0.30, prize: 2,   name: '🟡 黄洞' },
-                { rate: 0.35, prize: 0,   name: '�?空洞' }
-            ];
-            const r = Math.random();
-            let cum = 0;
-            let result = holes[holes.length - 1];
-            for (const h of holes) {
-                cum += h.rate;
-                if (r < cum) { result = h; break; }
-            }
-            if (result.prize > 0) {
-                player.cash += result.prize;
-                document.getElementById('pinballResult').textContent = result.name;
-                addLog('🕹 弹珠进了' + result.name + '！赢�?$' + result.prize, 'win');
-            } else {
-                document.getElementById('pinballResult').textContent = '💨 什么都没中�?;
-                addLog('🕹 弹珠掉进了空洞，啥也没有', 'lose');
-            }
-            updateUI();
-        }
+function pa(ac){
+var s=ps;if(s.ro)return;var tc=s.cb-s.pb;
+switch(ac){
+case'f':s.fd[0]=true;s.acts.push('你弃牌');s.ro=true;renderPoker();log('弃牌','lose');return;
+case'k':s.acts.push('你过牌');break;
+case'c':if(tc>s.ch[0]){log('筹码不够','lose');return;}s.ch[0]-=tc;s.pb+=tc;s.pot+=tc;s.acts.push('你跟注$'+tc);break;
+case'r':var ra=parseInt($('rA').value);if(!ra||ra<=tc||ra>s.ch[0]){log('无效','lose');return;}s.ch[0]-=ra;s.pb+=ra;s.pot+=ra;s.cb=s.pb;s.acts.push('你加注到$'+s.pb);break;
+}
+proceed();
+}
 
-        function showLoanMenu() {
-            const area = document.getElementById('gameArea');
-            let html = '<h2>💰 高利�?/h2>';
-            if (player.loanActive) {
-                const owed = Math.floor(player.loanAmount * Math.pow(1 + 0.05, player.loanDay));
-                html += '<p style="color:#e94560;">⚠️ 你有未还清的贷款�?/p>';
-                html += '<p>欠款�?' + owed + '（已�?' + player.loanDay + ' 天，期限 ' + player.loanMaxDays + ' 天）</p>';
-                html += '<button class="btn primary" onclick="repayLoan()">💸 还清 $' + owed + '</button>';
-                html += '<button class="btn" onclick="passDay()">�?过一天（利息滚存�?/button>';
-            } else {
-                html += '<table class="loan-table"><tr><th>级别</th><th>额度</th><th>日息</th><th>期限</th></tr>';
-                for (const l of LOANS) {
-                    html += '<tr><td>' + l.level + '</td><td>$' + l.amount + '</td><td>' + (l.dailyRate*100) + '%</td><td>' + l.maxDays + '�?/td></tr>';
-                }
-                html += '</table>';
-                for (let i = 0; i < LOANS.length; i++) {
-                    html += '<button class="btn warning" onclick="takeLoan(' + i + ')">�?$' + LOANS[i].amount + '</button> ';
-                }
-            }
-            html += '<br><button class="btn back-btn" onclick="showMainMenu()">�?返回</button>';
-            area.innerHTML = html;
-        }
+function proceed(){
+var s=ps;if(s.ro)return;var it=0;
+while(it<20){it++;var allD=true;
+for(var i=1;i<=3;i++){
+if(s.fd[i]||s.ch[i]<=0)continue;
+var act=[0,1,2,3].filter(function(j){return!s.fd[j]&&s.ch[j]>0}).length;
+if(act<=1){allD=true;break;}
+var aiTc=s.cb-s.ab[i];if(aiTc===0)continue;
+var dc=aiAct(AI_LEVELS[i-1],s.ah[i-1],s.com,s.pot,s.cb,s.ch[i],s.ab[i]);
+switch(dc.a){
+case'f':s.fd[i]=true;s.acts.push(AI_NAMES[i-1]+'弃牌');break;
+case'c':var ca=Math.min(aiTc,s.ch[i]);s.ch[i]-=ca;s.ab[i]+=ca;s.pot+=ca;if(ca>0)s.acts.push(AI_NAMES[i-1]+'跟注$'+ca);else s.acts.push(AI_NAMES[i-1]+'过牌');break;
+case'r':var ra2=Math.min(dc.am,s.ch[i]);if(ra2<=s.cb-s.ab[i]){var ca2=Math.min(s.cb-s.ab[i],s.ch[i]);s.ch[i]-=ca2;s.ab[i]+=ca2;s.pot+=ca2;s.acts.push(AI_NAMES[i-1]+'跟注$'+ca2);break;}
+s.ch[i]-=ra2;s.ab[i]+=ra2;s.pot+=ra2;s.cb=Math.max(s.cb,s.ab[i]);s.acts.push(AI_NAMES[i-1]+'加注到$'+s.ab[i]);break;
+}
+var rm=[0,1,2,3].filter(function(j){return!s.fd[j]&&s.ch[j]>0});
+if(rm.length<=1){s.ro=true;if(rm[0]===0){player.cash+=s.pot;s.acts.push('你赢了$'+s.pot);}else{s.ch[rm[0]]+=s.pot;s.acts.push(AI_NAMES[rm[0]-1]+'赢了$'+s.pot);}updateUI();renderPoker();log(s.acts[s.acts.length-1],rm[0]===0?'win':'lose');return;}
+}
+var ap=[0,1,2,3].filter(function(j){return!s.fd[j]&&s.ch[j]>0});
+var asb=ap.every(function(j){return(j===0?s.pb:s.ab[j])===s.cb});
+if(asb)break;allD=false;
+}
+var act2=[0,1,2,3].filter(function(j){return!s.fd[j]&&s.ch[j]>0});
+var ai2=act2.every(function(j){return(j===0?s.pb:s.ab[j])===s.cb||s.ch[j]<=0});
+if(ai2&&act2.length>1)nextStage();else renderPoker();
+}
 
-        function takeLoan(index) {
-            const l = LOANS[index];
-            if (player.loanActive) { addLog('你已经有贷款未还清了�?, 'lose'); return; }
-            player.cash += l.amount;
-            player.loanActive = true;
-            player.loanAmount = l.amount;
-            player.loanDay = 0;
-            player.loanMaxDays = l.maxDays;
-            player.debt = l.amount;
-            updateUI();
-            addLog('💰 借了 $' + l.amount + '，日�?' + (l.dailyRate*100) + '%，期�?' + l.maxDays + ' �?, 'info');
-            showMainMenu();
-        }
+function nextStage(){
+var s=ps;
+switch(s.stage){
+case'p':s.deck.pop();s.com.push(s.deck.pop(),s.deck.pop(),s.deck.pop());s.stage='f';s.acts.push('翻牌');break;
+case'f':s.deck.pop();s.com.push(s.deck.pop());s.stage='t';s.acts.push('转牌');break;
+case't':s.deck.pop();s.com.push(s.deck.pop());s.stage='r';s.acts.push('河牌');break;
+case'r':showdown();return;
+}
+s.pb=0;s.ab=[0,0,0];s.cb=0;renderPoker();setTimeout(function(){proceed();},200);
+}
 
-        function repayLoan() {
-            const owed = Math.floor(player.loanAmount * Math.pow(1 + 0.05, player.loanDay));
-            if (player.cash < owed) {
-                addLog('💸 现金不够还！需�?$' + owed, 'lose');
-                return;
-            }
-            player.cash -= owed;
-            player.loanActive = false;
-            player.loanAmount = 0;
-            player.loanDay = 0;
-            player.debt = 0;
-            updateUI();
-            addLog('�?贷款还清！一身轻松！', 'win');
-            showMainMenu();
-        }
+function showdown(){
+var s=ps;s.ro=true;
+var ap=[0,1,2,3].filter(function(j){return!s.fd[j]&&s.ch[j]>0});
+var bs=-1,wn=[],bn='';
+ap.forEach(function(j){
+var ca=j===0?s.ph:s.ah[j-1];var al=[...ca,...s.com];var r2=evalHand(al);var sc=r2.rank*100+r2.high;
+if(sc>bs){bs=sc;wn=[j];bn=r2.name;}else if(sc===bs){wn.push(j);}
+});
+var wa=Math.floor(s.pot/wn.length);
+wn.forEach(function(j){if(j===0)player.cash+=wa;else s.ch[j]+=wa;});
+var msg='';
+if(wn.length===1&&wn[0]===0)msg='你赢了！'+HAND_NAMES[bn]+'！$'+wa;
+else if(wn.includes(0))msg='平局！'+HAND_NAMES[bn]+' 你得$'+wa;
+else msg=AI_NAMES[wn[0]-1]+'赢了 '+HAND_NAMES[bn]+' $'+wa;
+log(msg,wn.includes(0)?'win':'lose');
+s.acts.push(msg);updateUI();renderPoker();
+}
 
-        // ===== 德州扑克 =====
-        const SUITS = ['�?, '�?, '�?, '�?];
-        const RANKS = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
-        const AI_NAMES = ['🐺 老狐�?, '🐰 小白�?, '🦅 秃鹫'];
-        const AI_LEVELS = ['高手', '菜鸡', '普�?];
-        let pokerState = {};
-
-        function createDeck() {
-            const deck = [];
-            for (const suit of SUITS) {
-                for (let i = 0; i < RANKS.length; i++) {
-                    deck.push({ rank: RANKS[i], rankIdx: i, suit, display: RANKS[i] + suit });
-                }
-            }
-            for (let i = deck.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [deck[i], deck[j]] = [deck[j], deck[i]];
-            }
-            return deck;
-        }
-
-        function evaluateHand(cards) {
-            const ranks = cards.map(c => c.rankIdx).sort((a,b) => a-b);
-            const suits = cards.map(c => c.suit);
-            const suitCount = {};
-            suits.forEach(s => suitCount[s] = (suitCount[s] || 0) + 1);
-            const flushSuit = Object.keys(suitCount).find(s => suitCount[s] >= 5);
-            const isFlush = !!flushSuit;
-            const rankCount = {};
-            ranks.forEach(r => rankCount[r] = (rankCount[r] || 0) + 1);
-            const counts = Object.values(rankCount).sort((a,b) => b-a);
-            const uniqueRanks = Object.keys(rankCount).map(Number).sort((a,b) => b-a);
-            let isStraight = false;
-            let straightHigh = 0;
-            const uniqueSorted = [...new Set(ranks)].sort((a,b) => b-a);
-            for (let i = 0; i <= uniqueSorted.length - 5; i++) {
-                if (uniqueSorted[i] - uniqueSorted[i+4] === 4) {
-                    isStraight = true;
-                    straightHigh = uniqueSorted[i];
-                    break;
-                }
-            }
-            if (uniqueSorted.includes(12) && uniqueSorted.includes(0) && uniqueSorted.includes(1) &&
-                uniqueSorted.includes(2) && uniqueSorted.includes(3)) {
-                isStraight = true;
-                straightHigh = 3;
-            }
-            if (isFlush && isStraight && straightHigh === 12) return { rank: 9, name: '皇家同花�?, high: straightHigh };
-            if (isFlush && isStraight) return { rank: 8, name: '同花�?, high: straightHigh };
-            if (counts[0] === 4) return { rank: 7, name: '四条', high: uniqueRanks.find(r => rankCount[r] === 4) || 0 };
-            if (counts[0] === 3 && counts[1] >= 2) return { rank: 6, name: '葫芦', high: uniqueRanks.find(r => rankCount[r] === 3) || 0 };
-            if (isFlush) return { rank: 5, name: '同花', high: uniqueRanks[0] || 0 };
-            if (isStraight) return { rank: 4, name: '顺子', high: straightHigh };
-            if (counts[0] === 3) return { rank: 3, name: '三条', high: uniqueRanks.find(r => rankCount[r] === 3) || 0 };
-            if (counts[0] === 2 && counts[1] === 2) return { rank: 2, name: '两对', high: uniqueRanks.filter(r => rankCount[r] === 2).sort((a,b) => b-a)[0] };
-            if (counts[0] === 2) return { rank: 1, name: '一�?, high: uniqueRanks.find(r => rankCount[r] === 2) || 0 };
-            return { rank: 0, name: '高牌', high: uniqueRanks[0] || 0 };
-        }
-
-        function aiDecide(level, hand, community, pot, currentBet, aiChip, aiBet) {
-            const evalResult = evaluateHand([...hand, ...community]);
-            const strength = evalResult.rank + evalResult.high / 100;
-            const r = Math.random();
-            const toCall = currentBet - aiBet;
-            const potOdds = toCall / (pot + toCall);
-            switch(level) {
-                case '高手':
-                    if (strength > 4.5) {
-                        return r < 0.7 ? { action: 'raise', amount: Math.floor(pot * (0.5 + r * 0.5)) + currentBet - aiBet } : { action: 'call' };
-                    } else if (strength > 2) {
-                        if (toCall === 0) return { action: 'check' };
-                        return potOdds < 0.2 ? { action: 'call' } : { action: 'fold' };
-                    } else {
-                        if (r < 0.15) return { action: 'raise', amount: Math.floor(pot * 0.5) + (toCall > 0 ? toCall : 0) };
-                        if (toCall === 0) return { action: 'check' };
-                        return potOdds > 0.3 ? { action: 'call' } : { action: 'fold' };
-                    }
-                case '普�?:
-                    if (strength > 5) {
-                        return r < 0.4 ? { action: 'raise', amount: Math.floor(pot * 0.3) + currentBet - aiBet } : { action: 'call' };
-                    } else if (strength > 2) {
-                        if (toCall === 0) return { action: 'check' };
-                        return potOdds < 0.3 ? { action: 'call' } : { action: 'fold' };
-                    } else {
-                        if (toCall <= 0 || r < 0.05) return { action: 'check' };
-                        return { action: 'fold' };
-                    }
-                default:
-                    if (strength > 5) {
-                        return r < 0.5 ? { action: 'call' } : { action: 'raise', amount: Math.floor(pot * 0.2) + currentBet - aiBet };
-                    } else if (strength > 2) {
-                        if (toCall === 0) return { action: 'check' };
-                        return r < 0.4 ? { action: 'call' } : { action: 'fold' };
-                    } else {
-                        if (toCall === 0) return { action: 'check' };
-                        return r < 0.2 ? { action: 'call' } : { action: 'fold' };
-                    }
-            }
-        }
-
-        function showPokerGame() {
-            const area = document.getElementById('gameArea');
-            area.innerHTML = `
-                <h2>🃏 德州扑克</h2>
-                <p style="text-align:center;font-size:13px;color:#888;">选择盲注级别开始游�?/p>
-                <div style="display:flex;justify-content:center;gap:8px;flex-wrap:wrap;">
-                    <button class="btn success" onclick="startPoker(50)">💵 �?$50</button>
-                    <button class="btn warning" onclick="startPoker(250)">💵💵 �?$250</button>
-                    <button class="btn danger" onclick="startPoker(500)">💵💵💵 �?$500</button>
-                </div>
-                <button class="btn back-btn" onclick="showMainMenu()">�?返回</button>
-            `;
-        }
-
-        function startPoker(blind) {
-            if (player.cash < blind * 10) {
-                addLog('🃏 现金不够！至少需�?$' + (blind * 10) + ' 才能上桌', 'lose');
-                return;
-            }
-            pokerState = {
-                blind,
-                deck: createDeck(),
-                playerHand: [],
-                aiHands: [],
-                community: [],
-                pot: 0,
-                stage: 'preflop',
-                playerBet: 0,
-                aiBets: [0,0,0],
-                currentBet: 0,
-                folded: [false, false, false, false],
-                chips: [blind * 10, blind * 10, blind * 10, blind * 10],
-                currentPlayer: 1,
-                dealerPos: 0,
-                actions: [],
-                phaseActions: 0,
-                lastRaiser: -1,
-                roundOver: false
-            };
-            const sb = Math.floor(blind / 2);
-            pokerState.chips[1] -= sb;
-            pokerState.chips[2] -= blind;
-            pokerState.aiBets[1] = sb;
-            pokerState.aiBets[2] = blind;
-            pokerState.currentBet = blind;
-            pokerState.pot = sb + blind;
-            pokerState.playerHand = [pokerState.deck.pop(), pokerState.deck.pop()];
-            for (let i = 0; i < 3; i++) {
-                pokerState.aiHands.push([pokerState.deck.pop(), pokerState.deck.pop()]);
-            }
-            pokerState.currentPlayer = 3;
-            pokerState.phaseActions = 0;
-            pokerState.lastRaiser = -1;
-            renderPoker();
-        }
-
-        function renderPoker() {
-            const s = pokerState;
-            const area = document.getElementById('gameArea');
-            const playerCards = s.playerHand.map(c => '<span style="color:' + (c.suit === '�? || c.suit === '�? ? '#e94560' : '#eee') + ';">' + c.display + '</span>').join(' ');
-            const communityCards = s.community.map(c => '<span style="color:' + (c.suit === '�? || c.suit === '�? ? '#e94560' : '#eee') + ';">' + c.display + '</span>').join(' ');
-            const communityDisplay = s.community.length === 0 ? '🂠🂠🂠' : communityCards;
-            const stageNames = { preflop: '翻牌�?, flop: '翻牌', turn: '转牌', river: '河牌' };
-            let html = '<h2>🃏 德州扑克</h2>';
-            html += '<p style="text-align:center;font-size:12px;color:#888;">' + stageNames[s.stage] + ' | 底池: $' + s.pot + '</p>';
-            html += '<div style="display:flex;justify-content:space-around;margin:8px 0;">';
-            for (let i = 0; i < 3; i++) {
-                const folded = s.folded[i+1] ? ' [弃牌]' : '';
-                const bet = s.aiBets[i+1] > 0 ? '下注: $' + s.aiBets[i+1] : '';
-                const handDisplay = s.roundOver && s.aiHands[i] ?
-                    '<span style="font-size:11px;">' + s.aiHands[i].map(c => '<span style="color:' + (c.suit === '�? || c.suit === '�? ? '#e94560' : '#eee') + ';">' + c.display + '</span>').join(' ') + '</span>' :
-                    '🂠🂠';
-                html += '<div style="text-align:center;font-size:12px;"><b>' + AI_NAMES[i] + ' (' + AI_LEVELS[i] + ')</b>' + folded + '<br>' + handDisplay + '<br><small>筹码: $' + s.chips[i+1] + ' ' + bet + '</small></div>';
-            }
-            html += '</div>';
-            html += '<div style="text-align:center;font-size:16px;margin:8px 0;">' + communityDisplay + '</div>';
-            html += '<div style="text-align:center;font-size:16px;margin:6px 0;">' + playerCards + '</div>';
-            html += '<p style="text-align:center;font-size:13px;">🧑 �?| 筹码: $' + s.chips[0];
-            if (s.playerBet > 0) html += ' | 已下�? $' + s.playerBet;
-            html += '</p>';
-            if (s.actions.length > 0) {
-                const lastActions = s.actions.slice(-5);
-                html += '<div style="font-size:11px;color:#888;margin:6px 0;">';
-                for (const a of lastActions) html += '<div>' + a + '</div>';
-                html += '</div>';
-            }
-            if (!s.roundOver && !s.folded[0] && s.chips[0] > 0) {
-                const toCall = s.currentBet - s.playerBet;
-                html += '<div style="text-align:center;margin-top:8px;">';
-                if (toCall === 0) html += '<button class="btn success small" onclick="pokerAction(\'check\')">�?过牌</button> ';
-                if (toCall > 0) html += '<button class="btn primary small" onclick="pokerAction(\'call\')">📞 跟注 ($' + toCall + ')</button> ';
-                if (s.chips[0] > toCall) {
-                    const minRaise = Math.max(toCall + Math.floor(s.blind/2), toCall * 2);
-                    html += '<button class="btn warning small" onclick="pokerAction(\'raise\')">�?加注</button> ';
-                    html += '$<input type="number" id="raiseAmount" value="' + Math.min(minRaise, s.chips[0]) + '" min="' + Math.min(minRaise, s.chips[0]) + '" max="' + s.chips[0] + '" style="width:70px;">';
-                }
-                html += ' <button class="btn danger small" onclick="pokerAction(\'fold\')">🏳 弃牌</button>';
-                html += '</div>';
-            }
-            if (s.roundOver) {
-                html += '<button class="btn primary" onclick="showPokerGame()" style="display:block;margin:10px auto;">🔄 再来一局</button>';
-            }
-            html += '<button class="btn back-btn" onclick="showMainMenu()">�?退出牌�?/button>';
-            area.innerHTML = html;
-        }
-
-        function pokerAction(action) {
-            const s = pokerState;
-            if (s.roundOver) return;
-            const toCall = s.currentBet - s.playerBet;
-            switch(action) {
-                case 'fold':
-                    s.folded[0] = true;
-                    s.actions.push('🧑 �?弃牌�?);
-                    s.roundOver = true;
-                    renderPoker();
-                    addLog('🃏 你弃牌了', 'lose');
-                    return;
-                case 'check':
-                    s.actions.push('🧑 �?过牌');
-                    s.phaseActions++;
-                    s.lastRaiser = -1;
-                    break;
-                case 'call':
-                    if (toCall > s.chips[0]) { addLog('筹码不够跟注', 'lose'); return; }
-                    s.chips[0] -= toCall;
-                    s.playerBet += toCall;
-                    s.pot += toCall;
-                    s.actions.push('🧑 �?跟注 $' + toCall);
-                    s.phaseActions++;
-                    break;
-                case 'raise':
-                    const raiseAmt = parseInt(document.getElementById('raiseAmount')?.value);
-                    if (!raiseAmt || raiseAmt <= toCall || raiseAmt > s.chips[0]) {
-                        addLog('无效的加注金�?, 'lose');
-                        return;
-                    }
-                    s.chips[0] -= raiseAmt;
-                    s.playerBet += raiseAmt;
-                    s.pot += raiseAmt;
-                    s.currentBet = s.playerBet;
-                    s.actions.push('🧑 �?加注�?$' + s.playerBet);
-                    s.phaseActions = 1;
-                    s.lastRaiser = 0;
-                    break;
-            }
-            s.phaseActions++;
-            proceedPoker();
-        }
-
-        function proceedPoker() {
-            const s = pokerState;
-            if (s.roundOver) return;
-            let allDone = false;
-            let iterations = 0;
-            while (!allDone && iterations < 20) {
-                iterations++;
-                allDone = true;
-                for (let i = 1; i <= 3; i++) {
-                    if (s.folded[i] || s.chips[i] <= 0) continue;
-                    const activeCount = [0,1,2,3].filter(j => !s.folded[j] && s.chips[j] > 0).length;
-                    if (activeCount <= 1) { allDone = true; break; }
-                    const aiToCall = s.currentBet - s.aiBets[i];
-                    if (aiToCall === 0 && s.lastRaiser < 0) continue;
-                    const hand = s.aiHands[i-1];
-                    const level = AI_LEVELS[i-1];
-                    const decision = aiDecide(level, hand, s.community, s.pot, s.currentBet, s.chips[i], s.aiBets[i]);
-                    switch(decision.action) {
-                        case 'fold':
-                            s.folded[i] = true;
-                            s.actions.push(AI_NAMES[i-1] + ' 弃牌�?);
-                            break;
-                        case 'call':
-                            const callAmt = Math.min(aiToCall, s.chips[i]);
-                            s.chips[i] -= callAmt;
-                            s.aiBets[i] += callAmt;
-                            s.pot += callAmt;
-                            if (callAmt > 0) s.actions.push(AI_NAMES[i-1] + ' 跟注 $' + callAmt);
-                            else s.actions.push(AI_NAMES[i-1] + ' 过牌');
-                            break;
-                        case 'raise':
-                            const raiseA = Math.min(decision.amount, s.chips[i]);
-                            if (raiseA <= s.currentBet - s.aiBets[i]) {
-                                const a = Math.min(s.currentBet - s.aiBets[i], s.chips[i]);
-                                s.chips[i] -= a;
-                                s.aiBets[i] += a;
-                                s.pot += a;
-                                s.actions.push(AI_NAMES[i-1] + ' 跟注 $' + a);
-                                break;
-                            }
-                            s.chips[i] -= raiseA;
-                            s.aiBets[i] += raiseA;
-                            s.pot += raiseA;
-                            s.currentBet = Math.max(s.currentBet, s.aiBets[i]);
-                            s.actions.push(AI_NAMES[i-1] + ' 加注�?$' + s.aiBets[i]);
-                            s.lastRaiser = i;
-                            break;
-                    }
-                    const remaining = [0,1,2,3].filter(j => !s.folded[j] && s.chips[j] > 0);
-                    if (remaining.length <= 1) {
-                        s.roundOver = true;
-                        const winner = remaining[0];
-                        if (winner === 0) {
-                            player.cash += s.pot;
-                            s.actions.push('🏆 你赢�?$' + s.pot + '！（其他人全弃牌�?);
-                        } else {
-                            s.chips[winner] += s.pot;
-                            s.actions.push('🏆 ' + AI_NAMES[winner - 1] + ' 赢了 $' + s.pot);
-                        }
-                        updateUI();
-                        renderPoker();
-                        addLog(s.actions[s.actions.length - 1], winner === 0 ? 'win' : 'lose');
-                        return;
-                    }
-                }
-                const activePlayers = [0,1,2,3].filter(j => !s.folded[j] && s.chips[j] > 0);
-                const allSameBet = activePlayers.every(j => {
-                    const bet = j === 0 ? s.playerBet : s.aiBets[j];
-                    return bet === s.currentBet;
-                });
-                if (allSameBet && s.lastRaiser < 0) break;
-                if (allSameBet && activePlayers.every(j => j === s.lastRaiser || (j === 0 ? s.playerBet : s.aiBets[j]) === s.currentBet)) break;
-                if (activePlayers.length === 1) break;
-                allDone = false;
-            }
-            const active = [0,1,2,3].filter(j => !s.folded[j] && s.chips[j] > 0);
-            const allIn = active.every(j => {
-                const bet = j === 0 ? s.playerBet : s.aiBets[j];
-                return bet === s.currentBet || s.chips[j] <= 0;
-            });
-            if (allIn && active.length > 1) { nextStage(); }
-            else { renderPoker(); }
-        }
-
-        function nextStage() {
-            const s = pokerState;
-            switch(s.stage) {
-                case 'preflop':
-                    s.deck.pop();
-                    s.community.push(s.deck.pop(), s.deck.pop(), s.deck.pop());
-                    s.stage = 'flop';
-                    s.actions.push('——�?翻牌 ——�?);
-                    break;
-                case 'flop':
-                    s.deck.pop();
-                    s.community.push(s.deck.pop());
-                    s.stage = 'turn';
-                    s.actions.push('——�?转牌 ——�?);
-                    break;
-                case 'turn':
-                    s.deck.pop();
-                    s.community.push(s.deck.pop());
-                    s.stage = 'river';
-                    s.actions.push('——�?河牌 ——�?);
-                    break;
-                case 'river':
-                    showdown();
-                    return;
-            }
-            s.playerBet = 0;
-            s.aiBets = [0,0,0];
-            s.currentBet = 0;
-            s.lastRaiser = -1;
-            s.phaseActions = 0;
-            s.currentPlayer = 3;
-            renderPoker();
-            setTimeout(() => proceedPoker(), 200);
-        }
-
-        function showdown() {
-            const s = pokerState;
-            s.roundOver = true;
-            const activePlayers = [0,1,2,3].filter(j => !s.folded[j] && s.chips[j] > 0);
-            let bestScore = -1;
-            let winners = [];
-            let bestHandName = '';
-            activePlayers.forEach(j => {
-                const cards = j === 0 ? s.playerHand : s.aiHands[j-1];
-                const allCards = [...cards, ...s.community];
-                const result = evaluateHand(allCards);
-                const score = result.rank * 100 + result.high;
-                if (score > bestScore) { bestScore = score; winners = [j]; bestHandName = result.name; }
-                else if (score === bestScore) { winners.push(j); }
-            });
-            const winAmount = Math.floor(s.pot / winners.length);
-            let resultMsg = '';
-            winners.forEach(j => {
-                if (j === 0) player.cash += winAmount;
-                else s.chips[j] += winAmount;
-            });
-            if (winners.length === 1 && winners[0] === 0) {
-                resultMsg = '🏆 你赢了！' + bestHandName + '！赢�?$' + winAmount;
-                addLog(resultMsg, 'win');
-            } else if (winners.includes(0)) {
-                resultMsg = '🏆 平局�? + bestHandName + '，你分得 $' + winAmount;
-                addLog(resultMsg, 'win');
-            } else {
-                resultMsg = '😢 ' + AI_NAMES[winners[0] - 1] + ' 赢了�? + bestHandName + '，赢�?$' + winAmount;
-                addLog(resultMsg, 'lose');
-            }
-            s.actions.push('📊 ' + bestHandName);
-            s.actions.push(resultMsg);
-            updateUI();
-            renderPoker();
-        }
-
-        function initGame() {
-            updateUI();
-            showMainMenu();
-            addLog('🎰 游戏开始！你有 $50 本金，祝你好运！', 'info');
-        }
-
-        window.onload = initGame;
-    </script>
+function init(){updateUI();showMenu();log('游戏开始！本金$50','info');}
+window.onload=init;
+</script>
 </body>
 </html>
