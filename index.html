@@ -624,14 +624,25 @@
 
         /** 显示德州扑克主界面 */
         function showPokerGame() {
-            // 检查选桌
             const area = document.getElementById('gameArea');
             area.innerHTML = `
                 <h2>🃏 德州扑克</h2>
-                <p class="desc">和3个AI对手对赌！选择盲注级别：</p>
-                <button class="btn success" onclick="startPoker(50)">💵 低级别 — 盲注 $50</button><br>
-                <button class="btn warning" onclick="startPoker(250)">💵💵 中级别 — 盲注 $250</button><br>
-                <button class="btn danger" onclick="startPoker(500)">💵💵💵 高级别 — 盲注 $500</button><br>
+
+                <div style="background:#0a0a1a;border-radius:6px;padding:10px;margin-bottom:10px;font-size:12px;color:#ccc;">
+                    <b style="color:#4ecca3;">📖 规则速览</b><br>
+                    • 每人发2张底牌 + 5张公共牌，从7张中挑最好的5张比大小<br>
+                    • 下注轮次：翻牌前 → 翻牌(3张) → 转牌(1张) → 河牌(1张) → 摊牌<br>
+                    • 你的操作：<span style="color:#4ecca3;">过牌</span> / <span style="color:#e94560;">跟注</span> / <span style="color:#f5a623;">加注</span> / <span style="color:#e94560;">弃牌</span><br>
+                    • AI弃牌时会亮出底牌，方便你学习判断！<br>
+                    <b style="color:#f5a623;">💡 新手提示：</b>起手有A、K、一对的时候就大胆跟！2和7这种烂牌直接弃。
+                </div>
+
+                <p class="desc" style="text-align:center;font-size:13px;color:#888;">🎯 选择盲注级别（至少需要 10倍盲注 才能上桌）</p>
+                <div style="display:flex;justify-content:center;gap:8px;flex-wrap:wrap;">
+                    <button class="btn success" onclick="startPoker(50)">💵 低 $50</button>
+                    <button class="btn warning" onclick="startPoker(250)">💵💵 中 $250</button>
+                    <button class="btn danger" onclick="startPoker(500)">💵💵💵 高 $500</button>
+                </div>
                 <button class="btn back-btn" onclick="showMainMenu()">← 返回</button>
             `;
         }
@@ -695,6 +706,45 @@
             // 玩家手牌显示
             const playerCards = s.playerHand.map(c => `<span style="color:${c.suit === '♥' || c.suit === '♦' ? '#e94560' : '#eee'};">${c.display}</span>`).join(' ');
 
+            // 计算玩家当前牌力（用于提示）
+            let handTip = '';
+            const allCards = [...s.playerHand, ...s.community];
+            if (allCards.length >= 2 && allCards.length < 5) {
+                // 翻牌前的起手牌评价
+                const r1 = s.playerHand[0].rankIdx, r2 = s.playerHand[1].rankIdx;
+                const sameSuit = s.playerHand[0].suit === s.playerHand[1].suit;
+                const high = Math.max(r1, r2);
+                const low = Math.min(r1, r2);
+                const isPair = r1 === r2;
+                let preflopTip = '';
+                if (isPair && high >= 11) preflopTip = '👑 口袋大对子！全力出击！';
+                else if (isPair && high >= 8) preflopTip = '💎 中对子，可以加注';
+                else if (isPair) preflopTip = '🟡 小对子，跟注看翻牌';
+                else if (high >= 12 && low >= 10 && sameSuit) preflopTip = '👑 AK同花！顶级起手牌！';
+                else if (high >= 12 && low >= 10) preflopTip = '💎 AK/AQ，好牌！';
+                else if (high >= 11 && sameSuit) preflopTip = '🟢 不错的同花牌';
+                else if (high >= 11) preflopTip = '🟡 单张大牌，谨慎跟注';
+                else if (sameSuit && high - low <= 3) preflopTip = '🟡 同花连张，可玩';
+                else preflopTip = '💨 烂牌，建议弃牌';
+                handTip = `<div style="text-align:center;font-size:12px;color:#f5a623;margin:2px 0;">${preflopTip}</div>`;
+            } else if (allCards.length >= 5) {
+                const evalResult = evaluateHand(allCards);
+                const tipMap = {
+                    0: { text: '💨 烂牌，建议弃牌', color: '#e94560' },
+                    1: { text: '🟡 一对，看情况跟注', color: '#f5a623' },
+                    2: { text: '🟠 两对，可以跟注', color: '#f5a623' },
+                    3: { text: '🟠 三条，准备加注！', color: '#f5a623' },
+                    4: { text: '🟢 顺子！好牌！', color: '#4ecca3' },
+                    5: { text: '🟢 同花！大胆加注！', color: '#4ecca3' },
+                    6: { text: '💎 葫芦！大牌！', color: '#4ecca3' },
+                    7: { text: '💎 四条！！', color: '#4ecca3' },
+                    8: { text: '👑 同花顺！！！', color: '#4ecca3' },
+                    9: { text: '👑👑 皇家同花顺！！', color: '#4ecca3' }
+                };
+                const tip = tipMap[evalResult.rank] || tipMap[0];
+                handTip = `<div style="text-align:center;font-size:12px;color:${tip.color};margin:2px 0;">${tip.text}</div>`;
+            }
+
             // 公共牌
             const communityCards = s.community.map(c =>
                 `<span style="color:${c.suit === '♥' || c.suit === '♦' ? '#e94560' : '#eee'};">${c.display}</span>`
@@ -727,6 +777,7 @@
             html += `<div style="text-align:center;font-size:28px;margin:12px 0;">${communityDisplay}</div>`;
 
             // 玩家手牌
+            html += `${handTip}`;
             html += `<div style="text-align:center;font-size:24px;margin:8px 0;">${playerCards}</div>`;
             html += `<p style="text-align:center;font-size:13px;">🧑 你 | 筹码: $${s.chips[0]}`;
             if (s.playerBet > 0) html += ` | 已下注: $${s.playerBet}`;
