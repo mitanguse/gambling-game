@@ -233,6 +233,7 @@
                         case 'work':    showWorkMenu(); break;
                         case 'beg':     doBeg(); break;
                         case 'loan':    showLoanMenu(); break;
+                        case 'poker':   showPokerGame(); break;
                         default: addLog(`${game.name} 还没做好，等等更新～`, 'info');
                     }
                 };
@@ -491,6 +492,553 @@
             updateUI();
             addLog(`✅ 贷款还清！一身轻松！`, 'win');
             showMainMenu();
+        }
+
+        // ============================================================
+        // 德州扑克
+        // ============================================================
+
+        // 牌面符号
+        const SUITS = ['♠', '♥', '♦', '♣'];
+        const RANKS = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+
+        // AI对手配置
+        const AI_NAMES = ['🐺 老狐狸', '🐰 小白兔', '🦅 秃鹫'];
+        const AI_LEVELS = ['高手', '菜鸡', '普通']; // 分别对应三个AI
+
+        let pokerState = {}; // 保存当前牌局状态
+
+        /** 创建一副新牌并洗牌 */
+        function createDeck() {
+            const deck = [];
+            for (const suit of SUITS) {
+                for (let i = 0; i < RANKS.length; i++) {
+                    deck.push({ rank: RANKS[i], rankIdx: i, suit, display: RANKS[i] + suit });
+                }
+            }
+            // Fisher-Yates 洗牌
+            for (let i = deck.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [deck[i], deck[j]] = [deck[j], deck[i]];
+            }
+            return deck;
+        }
+
+        /** 手牌组合排名 */
+        function evaluateHand(cards) {
+            // 从7张牌中选出最好的5张（简化版：只评估牌力等级，不列出具体牌型名）
+            const ranks = cards.map(c => c.rankIdx).sort((a,b) => a-b);
+            const suits = cards.map(c => c.suit);
+
+            // 检查同花
+            const suitCount = {};
+            suits.forEach(s => suitCount[s] = (suitCount[s] || 0) + 1);
+            const flushSuit = Object.keys(suitCount).find(s => suitCount[s] >= 5);
+            const isFlush = !!flushSuit;
+
+            // 统计各点数出现次数
+            const rankCount = {};
+            ranks.forEach(r => rankCount[r] = (rankCount[r] || 0) + 1);
+            const counts = Object.values(rankCount).sort((a,b) => b-a);
+            const uniqueRanks = Object.keys(rankCount).map(Number).sort((a,b) => b-a);
+
+            // 检查顺子
+            let isStraight = false;
+            let straightHigh = 0;
+            const uniqueSorted = [...new Set(ranks)].sort((a,b) => b-a);
+            for (let i = 0; i <= uniqueSorted.length - 5; i++) {
+                if (uniqueSorted[i] - uniqueSorted[i+4] === 4) {
+                    isStraight = true;
+                    straightHigh = uniqueSorted[i];
+                    break;
+                }
+            }
+            // A-2-3-4-5 特例
+            if (uniqueSorted.includes(12) && uniqueSorted.includes(0) && uniqueSorted.includes(1) &&
+                uniqueSorted.includes(2) && uniqueSorted.includes(3)) {
+                isStraight = true;
+                straightHigh = 3; // 5 high
+            }
+
+            // 判定牌型等级（数值越大越强）
+            if (isFlush && isStraight && straightHigh === 12) return { rank: 9, name: '皇家同花顺', high: straightHigh };
+            if (isFlush && isStraight) return { rank: 8, name: '同花顺', high: straightHigh };
+            if (counts[0] === 4) return { rank: 7, name: '四条', high: uniqueRanks.find(r => rankCount[r] === 4) || 0 };
+            if (counts[0] === 3 && counts[1] >= 2) return { rank: 6, name: '葫芦', high: uniqueRanks.find(r => rankCount[r] === 3) || 0 };
+            if (isFlush) return { rank: 5, name: '同花', high: uniqueRanks[0] || 0 };
+            if (isStraight) return { rank: 4, name: '顺子', high: straightHigh };
+            if (counts[0] === 3) return { rank: 3, name: '三条', high: uniqueRanks.find(r => rankCount[r] === 3) || 0 };
+            if (counts[0] === 2 && counts[1] === 2) return { rank: 2, name: '两对', high: uniqueRanks.filter(r => rankCount[r] === 2).sort((a,b) => b-a)[0] };
+            if (counts[0] === 2) return { rank: 1, name: '一对', high: uniqueRanks.find(r => rankCount[r] === 2) || 0 };
+            return { rank: 0, name: '高牌', high: uniqueRanks[0] || 0 };
+        }
+
+        /** AI决策 */
+        function aiDecide(level, hand, community, pot, currentBet, aiChip, aiBet) {
+            const evalResult = evaluateHand([...hand, ...community]);
+            const strength = evalResult.rank + evalResult.high / 100;
+            const r = Math.random();
+
+            // 已下的注视为沉没成本
+            const toCall = currentBet - aiBet;
+            const potOdds = toCall / (pot + toCall);
+
+            switch(level) {
+                case '高手':
+                    // 高手打得凶，也会诈唬
+                    if (strength > 4.5) { // 好牌
+                        return r < 0.7 ? { action: 'raise', amount: Math.floor(pot * (0.5 + r * 0.5)) + currentBet - aiBet }
+                                       : { action: 'call' };
+                    } else if (strength > 2) { // 中等牌
+                        if (toCall === 0) return { action: 'check' };
+                        return potOdds < 0.2 ? { action: 'call' } : { action: 'fold' };
+                    } else { // 烂牌
+                        if (r < 0.15) return { action: 'raise', amount: Math.floor(pot * 0.5) + (toCall > 0 ? toCall : 0) }; // 诈唬
+                        if (toCall === 0) return { action: 'check' };
+                        return potOdds > 0.3 ? { action: 'call' } : { action: 'fold' };
+                    }
+
+                case '普通':
+                    if (strength > 5) {
+                        return r < 0.4 ? { action: 'raise', amount: Math.floor(pot * 0.3) + currentBet - aiBet } : { action: 'call' };
+                    } else if (strength > 2) {
+                        if (toCall === 0) return { action: 'check' };
+                        return potOdds < 0.3 ? { action: 'call' } : { action: 'fold' };
+                    } else {
+                        if (toCall <= 0 || r < 0.05) return { action: 'check' };
+                        return { action: 'fold' };
+                    }
+
+                default: // 菜鸡
+                    if (strength > 5) {
+                        return r < 0.5 ? { action: 'call' } : { action: 'raise', amount: Math.floor(pot * 0.2) + currentBet - aiBet };
+                    } else if (strength > 2) {
+                        if (toCall === 0) return { action: 'check' };
+                        return r < 0.4 ? { action: 'call' } : { action: 'fold' };
+                    } else {
+                        if (toCall === 0) return { action: 'check' };
+                        return r < 0.2 ? { action: 'call' } : { action: 'fold' };
+                    }
+            }
+        }
+
+        /** 显示德州扑克主界面 */
+        function showPokerGame() {
+            // 检查选桌
+            const area = document.getElementById('gameArea');
+            area.innerHTML = `
+                <h2>🃏 德州扑克</h2>
+                <p class="desc">和3个AI对手对赌！选择盲注级别：</p>
+                <button class="btn success" onclick="startPoker(50)">💵 低级别 — 盲注 $50</button><br>
+                <button class="btn warning" onclick="startPoker(250)">💵💵 中级别 — 盲注 $250</button><br>
+                <button class="btn danger" onclick="startPoker(500)">💵💵💵 高级别 — 盲注 $500</button><br>
+                <button class="btn back-btn" onclick="showMainMenu()">← 返回</button>
+            `;
+        }
+
+        /** 开始一局 */
+        function startPoker(blind) {
+            if (player.cash < blind * 10) {
+                addLog(`🃏 现金不够！至少需要 $${blind * 10} 才能上桌`, 'lose');
+                return;
+            }
+
+            pokerState = {
+                blind,
+                deck: createDeck(),
+                playerHand: [],
+                aiHands: [],
+                community: [],
+                pot: 0,
+                stage: 'preflop',
+                playerBet: 0,        // 玩家在本轮已下注总数
+                aiBets: [0,0,0],     // 各AI在本轮已下注
+                currentBet: 0,       // 当前最高下注
+                folded: [false, false, false, false], // 0=玩家, 1-3=AI
+                chips: [blind * 10, blind * 10, blind * 10, blind * 10], // 每人筹码
+                currentPlayer: 1,    // 当前行动者（0=玩家, 1-3=AI），先让小盲位置开始
+                dealerPos: 0,        // 庄家位
+                actions: [],         // 行动记录
+                phaseActions: 0,     // 本轮已行动人数
+                lastRaiser: -1,      // 最后一个加注者
+                roundOver: false
+            };
+
+            // 扣盲注
+            // 小盲 = blind/2, 大盲 = blind
+            const sb = Math.floor(blind / 2);
+            pokerState.chips[1] -= sb; // AI1 小盲
+            pokerState.chips[2] -= blind; // AI2 大盲
+            pokerState.aiBets[1] = sb;
+            pokerState.aiBets[2] = blind;
+            pokerState.currentBet = blind;
+            pokerState.pot = sb + blind;
+
+            // 发牌
+            pokerState.playerHand = [pokerState.deck.pop(), pokerState.deck.pop()];
+            for (let i = 0; i < 3; i++) {
+                pokerState.aiHands.push([pokerState.deck.pop(), pokerState.deck.pop()]);
+            }
+
+            pokerState.currentPlayer = 3; // 大盲后面开始行动（玩家前面）
+            pokerState.phaseActions = 0;
+            pokerState.lastRaiser = -1;
+
+            renderPoker();
+        }
+
+        /** 渲染牌桌 */
+        function renderPoker() {
+            const s = pokerState;
+            const area = document.getElementById('gameArea');
+
+            // 玩家手牌显示
+            const playerCards = s.playerHand.map(c => `<span style="color:${c.suit === '♥' || c.suit === '♦' ? '#e94560' : '#eee'};">${c.display}</span>`).join(' ');
+
+            // 公共牌
+            const communityCards = s.community.map(c =>
+                `<span style="color:${c.suit === '♥' || c.suit === '♦' ? '#e94560' : '#eee'};">${c.display}</span>`
+            ).join(' ');
+            const communityDisplay = s.community.length === 0 ? '🂠🂠🂠' : communityCards;
+
+            // AI信息
+            const stageNames = { preflop: '翻牌前', flop: '翻牌', turn: '转牌', river: '河牌' };
+
+            let html = `<h2>🃏 德州扑克</h2>`;
+            html += `<p style="text-align:center;font-size:12px;color:#888;">${stageNames[s.stage]} | 底池: $${s.pot}</p>`;
+
+            // 显示AI
+            html += `<div style="display:flex;justify-content:space-around;margin:8px 0;">`;
+            for (let i = 0; i < 3; i++) {
+                const folded = s.folded[i+1] ? ' [弃牌]' : '';
+                const bet = s.aiBets[i+1] > 0 ? `下注: $${s.aiBets[i+1]}` : '';
+                const handDisplay = (s.stage === 'river' || s.folded[i+1]) && s.aiHands[i] ?
+                    `<span style="font-size:11px;">${s.aiHands[i].map(c => `<span style="color:${c.suit === '♥' || c.suit === '♦' ? '#e94560' : '#eee'};">${c.display}</span>`).join(' ')}</span>` :
+                    '🂠🂠';
+                html += `<div style="text-align:center;font-size:12px;">
+                    <b>${AI_NAMES[i]} (${AI_LEVELS[i]})</b>${folded}<br>
+                    ${handDisplay}<br>
+                    <small>筹码: $${s.chips[i+1]} ${bet}</small>
+                </div>`;
+            }
+            html += `</div>`;
+
+            // 公共牌
+            html += `<div style="text-align:center;font-size:28px;margin:12px 0;">${communityDisplay}</div>`;
+
+            // 玩家手牌
+            html += `<div style="text-align:center;font-size:24px;margin:8px 0;">${playerCards}</div>`;
+            html += `<p style="text-align:center;font-size:13px;">🧑 你 | 筹码: $${s.chips[0]}`;
+            if (s.playerBet > 0) html += ` | 已下注: $${s.playerBet}`;
+            html += `</p>`;
+
+            // 行动记录
+            if (s.actions.length > 0) {
+                const lastActions = s.actions.slice(-5);
+                html += `<div style="font-size:11px;color:#888;margin:6px 0;">`;
+                lastActions.forEach(a => {
+                    html += `<div>${a}</div>`;
+                });
+                html += `</div>`;
+            }
+
+            // 玩家操作按钮
+            if (!s.roundOver && !s.folded[0] && s.chips[0] > 0) {
+                const toCall = s.currentBet - s.playerBet;
+                html += `<div style="text-align:center;margin-top:8px;">`;
+                if (toCall === 0) {
+                    html += `<button class="btn success small" onclick="pokerAction('check')">✅ 过牌</button> `;
+                }
+                if (toCall > 0) {
+                    html += `<button class="btn primary small" onclick="pokerAction('call')">📞 跟注 ($${toCall})</button> `;
+                }
+                if (s.chips[0] > toCall) {
+                    const minRaise = Math.max(toCall + Math.floor(s.blind/2), toCall * 2);
+                    const maxRaise = s.chips[0];
+                    html += `<button class="btn warning small" onclick="pokerAction('raise')">⬆ 加注</button> `;
+                    html += `$<input type="number" id="raiseAmount" value="${Math.min(minRaise, maxRaise)}" min="${Math.min(minRaise, maxRaise)}" max="${maxRaise}" style="width:70px;">`;
+                }
+                html += ` <button class="btn danger small" onclick="pokerAction('fold')">🏳 弃牌</button>`;
+                html += `</div>`;
+            }
+
+            if (s.roundOver) {
+                html += `<button class="btn primary" onclick="showPokerGame()" style="display:block;margin:10px auto;">🔄 再来一局</button>`;
+            }
+
+            html += `<button class="btn back-btn" onclick="showMainMenu()">← 退出牌桌</button>`;
+            area.innerHTML = html;
+        }
+
+        /** 玩家行动 */
+        function pokerAction(action) {
+            const s = pokerState;
+            if (s.roundOver) return;
+
+            const toCall = s.currentBet - s.playerBet;
+
+            switch(action) {
+                case 'fold':
+                    s.folded[0] = true;
+                    s.actions.push('🧑 你 弃牌了');
+                    s.roundOver = true;
+                    renderPoker();
+                    addLog('🃏 你弃牌了', 'lose');
+                    return;
+
+                case 'check':
+                    s.actions.push('🧑 你 过牌');
+                    s.phaseActions++;
+                    s.lastRaiser = -1;
+                    break;
+
+                case 'call':
+                    if (toCall > s.chips[0]) { addLog('筹码不够跟注', 'lose'); return; }
+                    s.chips[0] -= toCall;
+                    s.playerBet += toCall;
+                    s.pot += toCall;
+                    s.actions.push(`🧑 你 跟注 $${toCall}`);
+                    s.phaseActions++;
+                    break;
+
+                case 'raise':
+                    const raiseAmt = parseInt(document.getElementById('raiseAmount')?.value);
+                    if (!raiseAmt || raiseAmt <= toCall || raiseAmt > s.chips[0]) {
+                        addLog('无效的加注金额', 'lose');
+                        return;
+                    }
+                    s.chips[0] -= raiseAmt;
+                    s.playerBet += raiseAmt;
+                    s.pot += raiseAmt;
+                    s.currentBet = s.playerBet;
+                    s.actions.push(`🧑 你 加注到 $${s.playerBet}`);
+                    s.phaseActions = 1; // 重置，自己算第一个
+                    s.lastRaiser = 0;
+                    break;
+            }
+
+            s.phaseActions++;
+            proceedPoker();
+        }
+
+        /** 推进牌局（AI行动 + 轮次切换） */
+        function proceedPoker() {
+            const s = pokerState;
+            if (s.roundOver) return;
+
+            // AI轮流行动
+            let allDone = false;
+            let iterations = 0;
+
+            while (!allDone && iterations < 20) {
+                iterations++;
+                allDone = true;
+
+                for (let i = 1; i <= 3; i++) {
+                    if (s.folded[i] || s.chips[i] <= 0) continue;
+
+                    // 检查是否所有人都行动完毕
+                    const activeCount = [0,1,2,3].filter(j => !s.folded[j] && s.chips[j] > 0).length;
+                    if (activeCount <= 1) {
+                        // 只剩一个人，直接赢
+                        allDone = true;
+                        break;
+                    }
+
+                    // 如果只有一个人还没行动，或者所有人都已行动一圈
+                    const aiToCall = s.currentBet - s.aiBets[i];
+                    if (aiToCall === 0 && s.lastRaiser < 0) continue; // 没人加注，检查是否所有人都行动过
+
+                    const hand = s.aiHands[i-1];
+                    const level = AI_LEVELS[i-1];
+                    const aiChip = s.chips[i];
+
+                    const decision = aiDecide(level, hand, s.community, s.pot, s.currentBet, aiChip, s.aiBets[i]);
+
+                    switch(decision.action) {
+                        case 'fold':
+                            s.folded[i] = true;
+                            s.actions.push(`${AI_NAMES[i-1]} 弃牌了`);
+                            break;
+                        case 'call':
+                            const callAmt = Math.min(aiToCall, s.chips[i]);
+                            s.chips[i] -= callAmt;
+                            s.aiBets[i] += callAmt;
+                            s.pot += callAmt;
+                            if (callAmt > 0) s.actions.push(`${AI_NAMES[i-1]} 跟注 $${callAmt}`);
+                            else s.actions.push(`${AI_NAMES[i-1]} 过牌`);
+                            break;
+                        case 'raise':
+                            const raiseA = Math.min(decision.amount, s.chips[i]);
+                            if (raiseA <= s.currentBet - s.aiBets[i]) {
+                                // 加注量不够，改跟注
+                                const a = Math.min(s.currentBet - s.aiBets[i], s.chips[i]);
+                                s.chips[i] -= a;
+                                s.aiBets[i] += a;
+                                s.pot += a;
+                                s.actions.push(`${AI_NAMES[i-1]} 跟注 $${a}`);
+                                break;
+                            }
+                            s.chips[i] -= raiseA;
+                            s.aiBets[i] += raiseA;
+                            s.pot += raiseA;
+                            s.currentBet = Math.max(s.currentBet, s.aiBets[i]);
+                            s.actions.push(`${AI_NAMES[i-1]} 加注到 $${s.aiBets[i]}`);
+                            s.lastRaiser = i;
+                            break;
+                    }
+
+                    // 检查是否只剩一人
+                    const remaining = [0,1,2,3].filter(j => !s.folded[j] && s.chips[j] > 0);
+                    if (remaining.length <= 1) {
+                        s.roundOver = true;
+                        // 把钱给赢家
+                        const winner = remaining[0];
+                        if (winner === 0) {
+                            player.cash += s.pot;
+                            s.actions.push(`🏆 你赢了 $${s.pot}！（其他人全弃牌）`);
+                        } else {
+                            const aiIdx = winner - 1;
+                            s.chips[winner] += s.pot;
+                            s.actions.push(`🏆 ${AI_NAMES[aiIdx]} 赢了 $${s.pot}`);
+                        }
+                        updateUI();
+                        renderPoker();
+                        addLog(s.actions[s.actions.length - 1], winner === 0 ? 'win' : 'lose');
+                        return;
+                    }
+                }
+
+                // 检查是否所有人都行动过一圈
+                const allActed = [1,2,3].every(i => s.folded[i] || s.chips[i] <= 0);
+                if (allActed) break;
+                allDone = true;
+                // 再次检查是否所有存活玩家都平等行动了
+                const activePlayers = [0,1,2,3].filter(j => !s.folded[j] && s.chips[j] > 0);
+                const allSameBet = activePlayers.every(j => {
+                    const bet = j === 0 ? s.playerBet : s.aiBets[j];
+                    return bet === s.currentBet;
+                });
+                if (allSameBet && s.lastRaiser < 0) break;
+                if (allSameBet && activePlayers.every(j => j === s.lastRaiser ||
+                    (j === 0 ? s.playerBet : s.aiBets[j]) === s.currentBet)) {
+                    break;
+                }
+                if (activePlayers.length === 1) break;
+                allDone = false;
+            }
+
+            // 如果所有人都跟注到同一级别，进入下一轮
+            const active = [0,1,2,3].filter(j => !s.folded[j] && s.chips[j] > 0);
+            const allIn = active.every(j => {
+                const bet = j === 0 ? s.playerBet : s.aiBets[j];
+                return bet === s.currentBet || s.chips[j] <= 0;
+            });
+
+            if (allIn && active.length > 1) {
+                nextStage();
+            } else {
+                renderPoker();
+            }
+        }
+
+        /** 进入下一阶段 */
+        function nextStage() {
+            const s = pokerState;
+
+            switch(s.stage) {
+                case 'preflop':
+                    // 发翻牌（3张）
+                    s.deck.pop(); // 弃一张
+                    s.community.push(s.deck.pop(), s.deck.pop(), s.deck.pop());
+                    s.stage = 'flop';
+                    s.actions.push('——— 翻牌 ———');
+                    break;
+                case 'flop':
+                    s.deck.pop();
+                    s.community.push(s.deck.pop());
+                    s.stage = 'turn';
+                    s.actions.push('——— 转牌 ———');
+                    break;
+                case 'turn':
+                    s.deck.pop();
+                    s.community.push(s.deck.pop());
+                    s.stage = 'river';
+                    s.actions.push('——— 河牌 ———');
+                    break;
+                case 'river':
+                    showdown();
+                    return;
+            }
+
+            // 重置下注
+            s.playerBet = 0;
+            s.aiBets = [0,0,0];
+            s.currentBet = 0;
+            s.lastRaiser = -1;
+            s.phaseActions = 0;
+
+            // 让大盲后面的先行动
+            s.currentPlayer = 3;
+            renderPoker();
+
+            // AI行动
+            setTimeout(() => proceedPoker(), 200);
+        }
+
+        /** 摊牌比大小 */
+        function showdown() {
+            const s = pokerState;
+            s.roundOver = true;
+
+            const activePlayers = [0,1,2,3].filter(j => !s.folded[j] && s.chips[j] > 0);
+
+            let bestScore = -1;
+            let winners = [];
+            let bestHandName = '';
+
+            activePlayers.forEach(j => {
+                const cards = j === 0 ? s.playerHand : s.aiHands[j-1];
+                const allCards = [...cards, ...s.community];
+                const result = evaluateHand(allCards);
+                const score = result.rank * 100 + result.high;
+
+                if (score > bestScore) {
+                    bestScore = score;
+                    winners = [j];
+                    bestHandName = result.name;
+                } else if (score === bestScore) {
+                    winners.push(j);
+                }
+            });
+
+            // 分钱
+            const winAmount = Math.floor(s.pot / winners.length);
+            let resultMsg = '';
+            winners.forEach(j => {
+                if (j === 0) {
+                    player.cash += winAmount;
+                } else {
+                    s.chips[j] += winAmount;
+                }
+            });
+
+            if (winners.length === 1 && winners[0] === 0) {
+                resultMsg = `🏆 你赢了！${bestHandName}！赢得 $${winAmount}`;
+                addLog(resultMsg, 'win');
+            } else if (winners.includes(0)) {
+                resultMsg = `🏆 平局！${bestHandName}，你分得 $${winAmount}`;
+                addLog(resultMsg, 'win');
+            } else {
+                const aiWinner = AI_NAMES[winners[0] - 1];
+                resultMsg = `😢 ${aiWinner} 赢了，${bestHandName}，赢得 $${winAmount}`;
+                addLog(resultMsg, 'lose');
+            }
+
+            s.actions.push(`📊 ${bestHandName}`);
+            s.actions.push(resultMsg);
+            updateUI();
+            renderPoker();
         }
 
         // ===== 初始化 =====
