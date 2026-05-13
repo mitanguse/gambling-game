@@ -1,11 +1,4 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>赌博模拟器</title>
-<style>
-/* ===== 全局 ===== */
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>赌博模拟器</title><style>/* ===== 全局 ===== */
 *{margin:0;padding:0;box-sizing:border-box}
 body{
     font-family:'Microsoft YaHei',sans-serif;
@@ -169,15 +162,7 @@ body{
 .hidden{display:none}
 .text-center{text-align:center}
 .mt10{margin-top:10px}
-
-</style>
-</head>
-<body>
-<div class="status-bar" id="statusBar"></div>
-<div class="game-area" id="gameArea"></div>
-<div class="log" id="logArea"></div>
-<script>
-/**
+</style></head><body><div class="status-bar" id="statusBar"></div><div class="game-area" id="gameArea"></div><div class="log" id="logArea"></div><script>/**
  * ============================================================
  * systems/save.js — 存档系统
  * ============================================================
@@ -238,7 +223,6 @@ const Save = {
         localStorage.removeItem(this.KEY);
     }
 };
-
 /**
  * ============================================================
  * engine.js — 赌博模拟器主引擎
@@ -374,7 +358,6 @@ function showMenu() {
                 case 'poker':   showPoker(); break;
                 case 'soccer':  showSoccer(); break;
                 case 'horse':   showHorse(); break;
-                case 'futures': showFutures(); break;
                 default:        log(g.name + ' 正在路上～', 'info');
             }
         };
@@ -417,20 +400,13 @@ function doWork(pay) {
     Player.workCount++;
     saveGame();
     updateStatus();
-    addDignity(1); log('💼 赚了 $' + pay + ' 尊严+1', 'win');
+    log('💼 赚了 $' + pay, 'win');
     showWork();
 }
 
-function tickAllFutures() {
-    FUTURES.forEach(function(f) {
-        let change = f.price * f.vol * (Math.random()-0.5) * 2;
-        f.price = Math.max(1, f.price + change);
-    });
-}
 function passDay() {
     Player.day++;
     Player.workCount = 0;
-    tickAllFutures();
     if (Player.loanActive) {
         Player.loanDays++;
         const owed = Math.floor(Player.loanAmount * Math.pow(1.05, Player.loanDays));
@@ -517,7 +493,7 @@ function rollDice() {
     if (sum === guess) {
         const win = bet * DICE_ODDS[sum];
         addCash(win);
-        addDignity(1); log('🎲 中了 $' + win + '！ 尊严+1', 'win');
+        log('🎲 中了 $' + win + '！', 'win');
     } else {
         addCash(-bet);
         log('🎲 输了 $' + bet, 'lose');
@@ -550,7 +526,7 @@ function buyScratch() {
     else { m = '😢 没中'; }
     addCash(p);
     $('scratchResult').textContent = p > 0 ? '🎉 $' + p : '💔 没中';
-    if(p>0){addDignity(1);log(m+' 尊严+1','win')}else log(m,'lose');
+    log(m, p > 0 ? 'win' : 'lose');
 }
 
 // ============================================================
@@ -586,7 +562,7 @@ function playPinball() {
     if (re.p > 0) {
         addCash(re.p);
         $('pinballResult').textContent = re.n;
-        addDignity(1); log('🕹 ' + re.n + ' $' + re.p + ' 尊严+1', 'win');
+        log('🕹 ' + re.n + ' $' + re.p, 'win');
     } else {
         $('pinballResult').textContent = '💨 没中';
         log('🕹 空洞', 'lose');
@@ -680,81 +656,6 @@ function repayLoan() {
 })();
 
 // ============================================================
-
-// 13. 炒期货
-// ============================================================
-const FUTURES = [
-    {name:'原油', price:75, vol:0.08},
-    {name:'黄金', price:1950, vol:0.03},
-    {name:'比特币', price:62000, vol:0.12},
-    {name:'大豆', price:1200, vol:0.05}
-];
-let futuresPositions = null;
-function showFutures() {
-    let h = '<h2>📈 炒期货</h2><p>选择品种和方向，价格实时波动！</p><div style="font-size:13px;">';
-    FUTURES.forEach(function(f,i){ h += '<p><b>'+f.name+'</b> $'+f.price+' 波动率'+(f.vol*100)+'%</p>'; });
-    h += '</div><p>品种 <select id="fSel">';
-    FUTURES.forEach(function(f,i){ h += '<option value="'+i+'">'+f.name+'</option>'; });
-    h += '</select><br>方向 <select id="fDir"><option value="long">做多</option><option value="short">做空</option></select>';
-    h += '<br>投入 $<input type="number" id="fAmt" value="1000" min="100"><br>';
-    h += '<button class="btn btn-lose" onclick="openFutures()">📈 开仓</button></p><div id="fPos"></div>';
-    if (futuresPositions) {
-        let f = FUTURES[futuresPositions.idx];
-        let pnl = futuresPositions.dir === "long" ? (f.price-futuresPositions.openPrice)/futuresPositions.openPrice*futuresPositions.amount : (futuresPositions.openPrice-f.price)/futuresPositions.openPrice*futuresPositions.amount;
-        h += '<div style="margin-top:10px;padding:10px;background:#0a0a05;border-radius:8px;border:1px solid #3d2a00;">';
-        h += '<p>持仓：'+f.name+' '+(futuresPositions.dir==="long" ? "📈做多" : "📉做空");
-        h += '<br>开仓价 $'+futuresPositions.openPrice+' | 当前价 $'+Math.floor(f.price);
-        h += '<br>盈亏 <span style="color:'+(pnl>=0?"#4ecca3":"#e94560")+'">$'+Math.floor(pnl)+'</span></p>';
-        h += '<button class="btn btn-win" onclick="closeFutures()">平仓</button> <button class="btn btn-warn" onclick="passDayFromFutures()">⏭ 过一天</button></div>';
-    }
-    h += '<button class="btn" onclick="showMenu()" style="margin-top:10px;">← 返回</button>';
-    $("gameArea").innerHTML = h;
-}
-function openFutures() {
-    let idx = parseInt($("fSel").value), dir = $("fDir").value, amt = parseInt($("fAmt").value);
-    if (!amt || amt<100 || amt>Player.cash) { log("金额无效","lose"); return; }
-    addCash(-amt);
-    futuresPositions = {idx:idx, dir:dir, amount:amt, openPrice:FUTURES[idx].price};
-    log("📈 开仓 "+FUTURES[idx].name+" "+(dir==="long"?"多":"空")+" $"+amt,"info");
-    showFutures();
-}
-function passDayFromFutures() {
-    tickAllFutures();
-    Player.day++;
-    Player.workCount = 0;
-    if (Player.loanActive) {
-        Player.loanDays++;
-        let owed = Math.floor(Player.loanAmount * Math.pow(1.05, Player.loanDays));
-        Player.debt = owed;
-        if (Player.loanDays > Player.loanMaxDays) {
-            log("💀 逾期！债主上门！", "lose");
-        } else {
-            log("⏭ 第 " + Player.day + " 天，债务滚到 $" + owed + "，期货价格已更新", "info");
-        }
-    } else {
-        log("⏭ 第 " + Player.day + " 天，期货价格已更新", "info");
-    }
-    saveGame();
-    updateStatus();
-    showFutures();
-}
-function closeFutures() {
-    if (!futuresPositions) return;
-    let f = FUTURES[futuresPositions.idx];
-    let pnl = futuresPositions.dir==="long" ? (f.price-futuresPositions.openPrice)/futuresPositions.openPrice*futuresPositions.amount : (futuresPositions.openPrice-f.price)/futuresPositions.openPrice*futuresPositions.amount;
-    let fee = Math.floor(Math.abs(pnl)*0.05);
-    let total = Math.floor(futuresPositions.amount + pnl - fee);
-    if (total<0) total=0;
-    addCash(total);
-    if(pnl>0){addDignity(3);log("📊 平仓 盈利 $"+Math.floor(pnl)+" 手续费$"+fee+" 尊严+3","win")}else{log("📊 平仓 亏损 $"+Math.floor(-pnl)+" 手续费$"+fee,"lose")}
-    futuresPositions = null;
-    showFutures();
-}
-function tickFutures() {
-    if (!futuresPositions) return;
-    log("⏭ 过一天所有期货价格都会波动，先去主菜单点"过一天"！","info");
-    showFutures();
-}
 // 12. 德州扑克
 // ============================================================
 
@@ -923,7 +824,7 @@ function pokerProceed() {
             if (rm.length<=1) {
                 s.ro=true; Player.cash+=s.ch[0];
                 let rk=Math.floor(s.pot*0.1); s.pot-=rk;
-                if (rm[0]===0) { Player.cash+=s.pot; addDignity(2); log('你赢了$'+s.pot+' 尊严+2','win'); }
+                if (rm[0]===0) { Player.cash+=s.pot; log('你赢了$'+s.pot,'win'); }
                 else { s.ch[rm[0]]+=s.pot; log(AI_NAMES[rm[0]-1]+'赢了$'+s.pot,'lose'); }
                 saveGame(); updateStatus(); renderPoker(); return;
             }
@@ -1004,7 +905,7 @@ function soccerBet(tp) {
     if (win===tp) {
         let w = amt*odds[tp];
         addCash(w+amt);
-        addDignity(2); log('⚽ 赢了！$'+(w+amt)+' 尊严+2','win');
+        log('⚽ 赢了！$'+(w+amt),'win');
     } else {
         log('⚽ 输了 $'+amt,'lose');
     }
@@ -1053,7 +954,7 @@ function horseBet() {
     if (win2===pick) {
         let w2 = Math.floor(amt*g.hs[pick].od);
         addCash(w2+amt);
-        addDignity(3); log('🐎 赢了 $'+w2+'！'+ordr+' 尊严+3','win');
+        log('🐎 赢了 $'+w2+'！'+ordr,'win');
         $('hR').innerHTML = '<p style="color:#4ecca3;">🏆 '+g.hs[win2].n+'夺冠！$'+w2+'</p>';
     } else {
         log('🐎 输了 $'+amt,'lose');
@@ -1073,7 +974,4 @@ function init() {
 }
 
 window.onload = init;
-
-</script>
-</body>
-</html>
+</script></body></html>
