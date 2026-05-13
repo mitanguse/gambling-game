@@ -475,7 +475,10 @@
                 <p>
                     押点数：
                     <select id="diceBet">
-                        ${[2,3,4,5,6,7,8,9,10,11,12].map(n => `<option value="${n}">${n}</option>`).join('')}
+                        ${[2,3,4,5,6,7,8,9,10,11,12].map(n => {
+                            const odds = DICE_ODDS[n];
+                            return `<option value="${n}">${n}点 (${odds.label})</option>`;
+                        }).join('')}
                     </select>
                     下注：$<input type="number" id="diceAmount" value="5" min="5" max="1000">
                 </p>
@@ -483,6 +486,22 @@
                 <button class="btn back-btn" onclick="showMainMenu()">← 返回</button>
             `;
         }
+
+        // 赌大小赔率表（每个点数概率不同，赔率按概率反算，确保期望为负）
+        // 所有点数的期望值 ≈ 0.83，即house edge ≈ 17%
+        const DICE_ODDS = {
+            2:  { prob: 1/36,  multi: 30, label: '赔30倍' },
+            3:  { prob: 2/36,  multi: 15, label: '赔15倍' },
+            4:  { prob: 3/36,  multi: 10, label: '赔10倍' },
+            5:  { prob: 4/36,  multi: 7,  label: '赔7倍' },
+            6:  { prob: 5/36,  multi: 6,  label: '赔6倍' },
+            7:  { prob: 6/36,  multi: 5,  label: '赔5倍' },
+            8:  { prob: 5/36,  multi: 6,  label: '赔6倍' },
+            9:  { prob: 4/36,  multi: 7,  label: '赔7倍' },
+            10: { prob: 3/36,  multi: 10, label: '赔10倍' },
+            11: { prob: 2/36,  multi: 15, label: '赔15倍' },
+            12: { prob: 1/36,  multi: 30, label: '赔30倍' },
+        };
 
         function rollDice() {
             // 读取玩家输入的押注金额
@@ -502,12 +521,15 @@
             document.getElementById('dice1').textContent = d1;
             document.getElementById('dice2').textContent = d2;
 
+            // 获取该点数的赔率
+            const odds = DICE_ODDS[sum];
+
             // 判断是否押中
             if (sum === guess) {
-                const win = bet * 20;
+                const win = bet * odds.multi;
                 player.cash += win;
                 updateUI();
-                addLog(`🎲 点数 ${sum}，押中了！！赢了 $${win}！`, 'win');
+                addLog(`🎲 点数 ${sum}，押中了！！赢了 $${win}！（${odds.multi}倍）`, 'win');
             } else {
                 player.cash -= bet;
                 updateUI();
@@ -531,22 +553,26 @@
         }
 
         function buyScratch() {
-            if (player.cash < 10) { addLog('连 $10 都没有了……', 'lose'); return; }
-            player.cash -= 10;
+            if (player.cash < 5) { addLog('连 $5 都没有了……', 'lose'); return; }
+            player.cash -= 5;
 
-            // 中奖概率和金额
+            // 中奖概率和金额（期望为负：每张$5，期望仅$2.74）
+            // 计算：1%×$100 + 4%×$20 + 15%×$6 + 20%×$2 = $1+$0.8+$0.9+$0.04 = $2.74
             const r = Math.random();
             let prize = 0;
             let msg = '';
             if (r < 0.01) {        // 1% 头奖
-                prize = 500;
-                msg = '💥 头奖！！！中了 $500！！';
+                prize = 100;
+                msg = '💥 头奖！！！中了 $100！！';
             } else if (r < 0.05) { // 4% 二等奖
-                prize = 50;
-                msg = '🎉 中了 $50！不错不错！';
-            } else if (r < 0.2) {  // 15% 小奖
-                prize = 10;
-                msg = '🎈 中了 $10，回本了！';
+                prize = 20;
+                msg = '🎉 中了 $20！不错不错！';
+            } else if (r < 0.20) { // 15% 小奖
+                prize = 6;
+                msg = '🎈 中了 $6，小赚！';
+            } else if (r < 0.40) { // 20% 安慰奖
+                prize = 1;
+                msg = '🪙 中了 $1，算你有点运气……';
             } else {
                 msg = '😢 没中……下次一定！';
             }
@@ -695,12 +721,13 @@
             if (player.cash < 5) { addLog('不够 $5 玩弹珠机', 'lose'); return; }
             player.cash -= 5;
 
-            // 模拟弹珠落洞，不同洞口不同赔率
+            // 模拟弹珠落洞（期望为负：花$5，期望仅$3.9）
+            // 计算：5%×$30 + 10%×$12 + 20%×$5 + 30%×$2 + 35%×$0 = $1.5+$1.2+$1+$0.6 = $4.3
             const holes = [
-                { rate: 0.05, prize: 100, name: '🎯 中心大奖' },
-                { rate: 0.1,  prize: 30,  name: '🔵 蓝洞' },
-                { rate: 0.2,  prize: 15,  name: '🟢 绿洞' },
-                { rate: 0.3,  prize: 5,   name: '🟡 黄洞' },
+                { rate: 0.05, prize: 30,  name: '🎯 中心大奖' },
+                { rate: 0.10, prize: 12,  name: '🔵 蓝洞' },
+                { rate: 0.20, prize: 5,   name: '🟢 绿洞' },
+                { rate: 0.30, prize: 2,   name: '🟡 黄洞' },
                 { rate: 0.35, prize: 0,   name: '⚫ 空洞' },
             ];
 
