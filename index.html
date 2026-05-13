@@ -260,7 +260,6 @@ const Save = {
 let saved = Save.load();
 const Player = saved || {
     cash: 50,       // 现金
-    dignity: 100,   // 尊严值
     debt: 0,        // 债务
     loanActive: false,
     loanAmount: 0,
@@ -277,12 +276,12 @@ const Player = saved || {
 // ============================================================
 // 每个游戏写成独立的配置项，方便以后再加
 const GAMES = [
-    { id: 'dice',    name: '赌大小', icon: '🎲', cash: 0,   dignity: 0  },
-    { id: 'scratch', name: '刮刮乐', icon: '🎫', cash: 0,   dignity: 0  },
-    { id: 'pinball', name: '弹珠机', icon: '🕹', cash: 0,   dignity: 0  },
-    { id: 'work',    name: '打工',   icon: '💼', cash: 0,   dignity: 0  },
-    { id: 'beg',     name: '乞讨',   icon: '🪱', cash: 0,   dignity: 0  },
-    { id: 'loan',    name: '借钱',   icon: '💰', cash: 0,   dignity: 0  },
+    { id: 'dice',    name: '赌大小', icon: '🎲', cash: 0  },
+    { id: 'scratch', name: '刮刮乐', icon: '🎫', cash: 0  },
+    { id: 'pinball', name: '弹珠机', icon: '🕹', cash: 0  },
+    { id: 'work',    name: '打工',   icon: '💼', cash: 0  },
+    { id: 'beg',     name: '乞讨',   icon: '🪱', cash: 0  },
+    { id: 'loan',    name: '借钱',   icon: '💰', cash: 0  },
     { id: 'poker',   name: '德州扑克', icon: '🃏', cash: 500 },
     { id: 'soccer',  name: '赌球',   icon: '⚽', cash: 2000 },
     { id: 'horse',   name: '赌马',   icon: '🐎', cash: 2000 },
@@ -372,7 +371,7 @@ function washDishes() {
 
 function showMenu() {
     let html = '<h2>🎰 赌博模拟器</h2>';
-    html += '<p>现金: $' + Player.cash + ' | 尊严: ' + Player.dignity;
+    html += '<p>现金: $' + Player.cash + ' | 债务: $' + Player.debt + '</p>';
     html += ' | 债务: $' + Player.debt + '</p>';
     html += '<div class="menu-grid" id="menuGrid"></div>';
     html += '<div style="text-align:center;margin-top:12px;"><button class="btn btn-warn" onclick="passDay()">⏭ 过一天</button></div>';
@@ -384,8 +383,7 @@ function showMenu() {
 
         // 检查解锁条件
         const cashOk = Player.cash >= g.cash;
-        const digOk = Player.dignity >= g.dignity;
-        const locked = !cashOk || !digOk;
+        const locked = Player.cash < g.cash;
 
         if (locked) b.classList.add('locked');
         b.innerHTML = '<span class="icon">' + g.icon + '</span>' + g.name;
@@ -394,7 +392,7 @@ function showMenu() {
             if (locked) {
                 let r = '🔒 需要';
                 if (Player.cash < g.cash) r += ' $' + g.cash;
-                if (Player.dignity < g.dignity) r += ' 尊严' + g.dignity;
+
                 log(r, 'lose');
                 return;
             }
