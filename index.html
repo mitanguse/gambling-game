@@ -137,7 +137,7 @@ if(ld){var r='';if(player.cash<game.unlockCash)r+='需要$'+game.unlockCash+' ';
 switch(game.id){
 case'dice':showDice();break;case'scratch':showScratch();break;case'pinball':showPinball();break;
 case'work':showWork();break;case'beg':doBeg();break;case'loan':showLoan();break;
-case'poker':showPoker();break;default:log('还没做好','info');
+case'poker':showPoker();break;case'soccer':showSoccer();break;case'horse':showHorse();break;default:log('还没做好','info');
 }
 };
 g.appendChild(b);
@@ -401,6 +401,82 @@ else if(wn.includes(0))msg='平局！'+HAND_NAMES[bn]+' 你得$'+wa;
 else msg=AI_NAMES[wn[0]-1]+'赢了 '+HAND_NAMES[bn]+' $'+wa;
 log(msg,wn.includes(0)?'win':'lose');
 s.acts.push(msg);updateUI();renderPoker();
+}
+
+// Soccer Betting
+var TEAMS=[{n:'成都蓉城',s:85},{n:'上海海港',s:90},{n:'北京国安',s:80},{n:'山东泰山',s:75},{n:'广州恒大',s:70},{n:'深圳鹏城',s:65},{n:'武汉三镇',s:60},{n:'天津津门虎',s:55}];
+function showSoccer(){
+var a=$('gameArea'),t=[],h='<h2>赌球</h2>';
+for(var i=0;i<4;i++){var idx=Math.floor(Math.random()*TEAMS.length);if(t.indexOf(idx)<0)t.push(idx);else i--;}
+var hTeam=TEAMS[t[0]],aTeam=TEAMS[t[1]];
+soccerGame={h:hTeam,a:aTeam,bet:0,result:null};
+h+='<p>'+hTeam.n+' vs '+aTeam.n+'</p>';
+h+='<p>赔率：<br>主胜 '+(200-hTeam.s)+'% | 客胜 '+(200-aTeam.s)+'% | 平 30%</p>';
+h+='<button class="btn" onclick="soccerBet(\'h\')">押主胜</button> ';
+h+='<button class="btn" onclick="soccerBet(\'a\')">押客胜</button> ';
+h+='<button class="btn" onclick="soccerBet(\'d\')">押平局</button><br>';
+h+='<p>下注$<input type="number" id="sBA" value="10" min="5"></p>';
+h+='<div id="sR"></div><button class="btn" onclick="showMenu()">返回</button>';
+a.innerHTML=h;
+}
+var soccerGame={};
+function soccerBet(t){
+var amt=parseInt($('sBA').value);
+if(!amt||amt<5||amt>player.cash){log('金额无效','lose');return;}
+var s=soccerGame;
+var r=Math.random()*100;
+var hW=200-s.h.s,aW=200-s.a.s,dW=30;
+var total=hW+aW+dW;
+var hP=hW/total,aP=(hW+aW)/total;
+var win='';
+if(r<hP)win='h';else if(r<aP)win='a';else win='d';
+var odds={h:Math.floor(total/hW*0.85),a:Math.floor(total/aW*0.85),d:Math.floor(total/dW*0.85)};
+player.cash-=amt;
+if(win===t){var w=amt*odds[t];player.cash+=w;log('赢了！$'+w,'win');$('sR').innerHTML='<p style="color:#4ecca3">'+s.h.n+' '+Math.floor(Math.random()*4)+'-'+Math.floor(Math.random()*4)+' '+s.a.n+'<br>你赢了$'+w+'</p>';}
+else{log('输了$'+amt,'lose');$('sR').innerHTML='<p style="color:#e94560">'+s.h.n+' '+Math.floor(Math.random()*5)+'-'+Math.floor(Math.random()*5)+' '+s.a.n+'<br>你输了</p>';}
+updateUI();
+}
+
+// Horse Racing
+var HORSE_NAMES=['赤兔','闪电','追风','踏雪'];
+function showHorse(){
+var a=$('gameArea'),h='<h2>赌马</h2>';var horses=[];
+for(var i=0;i<4;i++){horses.push({n:HORSE_NAMES[i],spd:Math.floor(Math.random()*50+50),sta:Math.floor(Math.random()*50+50),odd:0});}
+var totalP=0;
+horses.forEach(function(x){x.p=Math.floor(Math.random()*30+10);totalP+=x.p;});
+horses.forEach(function(x){x.odd=Math.floor(totalP/x.p*0.85*100)/100;});
+horseRace={horses:horses,bet:0,locked:false};
+h+='<div style="font-size:13px">';
+horses.forEach(function(x,i){h+='<p>'+x.n+' 速度'+x.spd+' 耐力'+x.sta+' 赔率'+x.odd+'</p>';});
+h+='</div><p>押<select id="hB">';
+for(var i=0;i<4;i++)h+='<option value="'+i+'">'+horses[i].n+'</option>';
+h+='</select> 下注$<input type="number" id="hA" value="10" min="5">';
+h+='<br><button class="btn" onclick="horseBet()">下注开跑</button></p>';
+h+='<div id="hR"><p>选一匹马下注！</p></div><button class="btn" onclick="showMenu()">返回</button>';
+a.innerHTML=h;
+}
+var horseRace={};
+function horseBet(){
+var amt=parseInt($('hA').value),pick=parseInt($('hB').value);
+if(!amt||amt<5||amt>player.cash){log('金额无效','lose');return;}
+var r=horseRace;r.locked=true;
+player.cash-=amt;
+// Run race
+var results=[];
+for(var i=0;i<4;i++){var s=r.horses[i].spd*Math.random()*0.5+r.horses[i].sta*Math.random()*0.3;results.push({i:i,s:s});}
+results.sort(function(a,b){return b.s-a.s});
+var winner=results[0].i;
+var order=results.map(function(x){return r.horses[x.i].n;}).join(' > ');
+if(winner===pick){
+var w=Math.floor(amt*r.horses[pick].odd);
+player.cash+=w+amt;
+$('hR').innerHTML='<p style="color:#4ecca3">'+r.horses[winner].n+'夺冠！你赢了$'+w+'！<br>'+order+'</p>';
+log('赌马赢了$'+w,'win');
+}else{
+$('hR').innerHTML='<p style="color:#e94560">'+r.horses[winner].n+'夺冠！你输了<br>'+order+'</p>';
+log('赌马输了$'+amt,'lose');
+}
+updateUI();
 }
 
 function init(){updateUI();showMenu();log('游戏开始！本金$50','info');}
