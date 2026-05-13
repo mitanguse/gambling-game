@@ -164,7 +164,7 @@ body{
 .mt10{margin-top:10px}
 </style></head><body><div class="status-bar" id="statusBar"></div><div class="game-area" id="gameArea"></div><div class="log" id="logArea"></div><script>/**
  * ============================================================
- * systems/save.js — 存档系统
+ * systems/save.js - 存档系统
  * ============================================================
  * 
  * 作用：把游戏数据保存到浏览器的 localStorage 里，
@@ -225,7 +225,7 @@ const Save = {
 };
 /**
  * ============================================================
- * engine.js — 赌博模拟器主引擎
+ * engine.js - 赌博模拟器主引擎
  * ============================================================
  * 
  * 职责：
@@ -425,7 +425,7 @@ function showWork() {
     } else {
         JOBS.forEach(function(j) {
             h += '<button class="btn btn-win" onclick="doWork(' + j.pay + ')">'
-                 + j.name + ' — $' + j.pay + '</button> ';
+                 + j.name + ' - $' + j.pay + '</button> ';
         });
     }
     h += '<br><button class="btn" onclick="showMenu()" style="margin-top:10px;">← 返回</button>';
