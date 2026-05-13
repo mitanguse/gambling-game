@@ -325,6 +325,7 @@ function showMenu() {
     html += '<p>现金: $' + Player.cash + ' | 尊严: ' + Player.dignity;
     html += ' | 债务: $' + Player.debt + '</p>';
     html += '<div class="menu-grid" id="menuGrid"></div>';
+    html += '<div style="text-align:center;margin-top:12px;"><button class="btn btn-warn" onclick="passDay()">⏭ 过一天</button></div>';
     $('gameArea').innerHTML = html;
 
     GAMES.forEach(function(g) {
