@@ -1,4 +1,11 @@
-<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>赌博模拟器</title><style>/* ===== 全局 ===== */
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>赌博模拟器</title>
+<style>
+/* ===== 全局 ===== */
 *{margin:0;padding:0;box-sizing:border-box}
 body{
     font-family:'Microsoft YaHei',sans-serif;
@@ -162,7 +169,15 @@ body{
 .hidden{display:none}
 .text-center{text-align:center}
 .mt10{margin-top:10px}
-</style></head><body><div class="status-bar" id="statusBar"></div><div class="game-area" id="gameArea"></div><div class="log" id="logArea"></div><script>/**
+
+</style>
+</head>
+<body>
+<div class="status-bar" id="statusBar"></div>
+<div class="game-area" id="gameArea"></div>
+<div class="log" id="logArea"></div>
+<script>
+/**
  * ============================================================
  * systems/save.js - 存档系统
  * ============================================================
@@ -223,6 +238,7 @@ const Save = {
         localStorage.removeItem(this.KEY);
     }
 };
+
 /**
  * ============================================================
  * engine.js - 赌博模拟器主引擎
@@ -1093,4 +1109,7 @@ function init() {
 }
 
 window.onload = init;
-</script></body></html>
+
+</script>
+</body>
+</html>
