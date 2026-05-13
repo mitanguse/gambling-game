@@ -374,7 +374,7 @@ function showMenu() {
     html += '<p>现金: $' + Player.cash + ' | 债务: $' + Player.debt + '</p>';
     html += ' | 债务: $' + Player.debt + '</p>';
     html += '<div class="menu-grid" id="menuGrid"></div>';
-    html += '<div style="text-align:center;margin-top:12px;"><button class="btn btn-warn" onclick="passDay()">⏭ 过一天</button></div>';
+    html += '<div style="text-align:center;margin-top:12px;"><button class="btn btn-warn" onclick="passDay()">⏭ 过一天</button> <button class="btn btn-lose" onclick="resetGame()">🔄 重开</button></div>';
     $('gameArea').innerHTML = html;
 
     GAMES.forEach(function(g) {
@@ -1096,6 +1096,13 @@ function horseBet() {
 // ============================================================
 // 15. 启动游戏
 // ============================================================
+
+function resetGame() {
+    if (confirm('确定要重开吗？所有进度会丢失！')) {
+        Save.clear();
+        location.reload();
+    }
+}
 
 function init() {
     updateStatus();
