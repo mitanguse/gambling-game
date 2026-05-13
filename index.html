@@ -1,10 +1,11 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>璧屽崥妯℃嫙鍣?/title>
-<style>/* ===== 鍏ㄥ眬 ===== */
+<title>赌博模拟器</title>
+<style>
+/* ===== 全局 ===== */
 *{margin:0;padding:0;box-sizing:border-box}
 body{
     font-family:'Microsoft YaHei',sans-serif;
@@ -16,7 +17,7 @@ body{
     min-height:100vh
 }
 
-/* ===== 鐘舵€佹爮 ===== */
+/* ===== 状态栏 ===== */
 .status-bar{
     background:linear-gradient(135deg,#1a0a00,#2d1300);
     border:1px solid #d4a04a;
@@ -35,7 +36,7 @@ body{
 .stat .debt{color:#e94560;text-shadow:0 0 8px rgba(233,69,96,0.4)}
 .stat .dignity{color:#f5a623;text-shadow:0 0 8px rgba(245,166,35,0.4)}
 
-/* ===== 娓告垙鍖哄煙 ===== */
+/* ===== 游戏区域 ===== */
 .game-area{
     background:linear-gradient(135deg,#1a0a00,#2d1300);
     border:1px solid #d4a04a;
@@ -59,7 +60,7 @@ body{
     line-height:1.5
 }
 
-/* ===== 鎸夐挳 ===== */
+/* ===== 按钮 ===== */
 .btn{
     background:linear-gradient(135deg,#2a1a00,#3d2a00);
     color:#f5d68e;
@@ -85,7 +86,7 @@ body{
 .btn-warn{background:linear-gradient(135deg,#5a3a00,#8a5a00);border-color:#f5a623;color:#f5a623}
 .btn-sm{padding:6px 12px;font-size:12px}
 
-/* ===== 鑿滃崟 ===== */
+/* ===== 菜单 ===== */
 .menu-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
 .menu-btn{
     background:linear-gradient(135deg,#1a0a00,#2d1300);
@@ -107,7 +108,7 @@ body{
 .menu-btn.locked{opacity:0.5;cursor:not-allowed}
 .menu-btn.locked:after{content:" locked";font-size:10px;color:#a08050}
 
-/* ===== 鏃ュ織 ===== */
+/* ===== 日志 ===== */
 .log{
     background:#0a0a05;
     border:1px solid #3d2a00;
@@ -123,7 +124,7 @@ body{
 .log .lose{color:#e94560}
 .log .info{color:#f5a623}
 
-/* ===== 鎵戝厠鐗屾牱寮?===== */
+/* ===== 扑克牌样式 ===== */
 .hand-cards{display:flex;justify-content:center;gap:8px;margin:8px 0;flex-wrap:wrap}
 .card{
     display:inline-flex;
@@ -156,7 +157,7 @@ body{
     overflow:hidden
 }
 .card-back:after{
-    content:'馃偁';
+    content:'🂠';
     position:absolute;
     top:50%;left:50%;
     transform:translate(-50%,-50%);
@@ -164,60 +165,59 @@ body{
     opacity:0.3
 }
 
-/* ===== 宸ュ叿绫?===== */
+/* ===== 工具类 ===== */
 .hidden{display:none}
 .text-center{text-align:center}
 .mt10{margin-top:10px}
+
 </style>
 </head>
 <body>
-<!-- 鐘舵€佹爮 -->
 <div class="status-bar" id="statusBar"></div>
-
-<!-- 娓告垙涓诲尯鍩?-->
 <div class="game-area" id="gameArea"></div>
-
-<!-- 鏃ュ織 -->
 <div class="log" id="logArea"></div>
-
-<!-- 鑴氭湰 -->
-<script>/**
+<script>
+/**
  * ============================================================
- * systems/save.js 鈥?瀛樻。绯荤粺
+ * systems/save.js — 存档系统
  * ============================================================
  * 
- * 浣滅敤锛氭妸娓告垙鏁版嵁淇濆瓨鍒版祻瑙堝櫒鐨?localStorage 閲岋紝
- *       鍏抽棴椤甸潰鍐嶆墦寮€杩樿兘鎺ョ潃鐜┿€? * 
- * 鐢ㄦ硶锛? *   Save.save(data)   鈫?淇濆瓨
- *   Save.load()       鈫?璇诲彇
- *   Save.clear()      鈫?娓呴櫎瀛樻。
+ * 作用：把游戏数据保存到浏览器的 localStorage 里，
+ *       关闭页面再打开还能接着玩。
+ * 
+ * 用法：
+ *   Save.save(data)   → 保存
+ *   Save.load()       → 读取
+ *   Save.clear()      → 清除存档
  */
 
 const Save = {
-    /** 瀛樻。鐨勯敭鍚?*/
+    /** 存档的键名 */
     KEY: 'gambling_save',
 
     /**
-     * 淇濆瓨鏁版嵁
-     * @param {Object} data - 瑕佷繚瀛樼殑鐜╁鏁版嵁
+     * 保存数据
+     * @param {Object} data - 要保存的玩家数据
      */
     save: function(data) {
         try {
-            // 缁欏瓨妗ｅ姞涓椂闂存埑锛屾柟渚跨煡閬撴槸浠€涔堟椂鍊欏瓨鐨?            const packet = {
+            // 给存档加个时间戳，方便知道是什么时候存的
+            const packet = {
                 data: data,
                 savedAt: new Date().toISOString(),
-                version: 1  // 浠ュ悗鍗囩骇鐢?            };
+                version: 1  // 以后升级用
+            };
             localStorage.setItem(this.KEY, JSON.stringify(packet));
             return true;
         } catch(e) {
-            console.error('淇濆瓨澶辫触:', e);
+            console.error('保存失败:', e);
             return false;
         }
     },
 
     /**
-     * 璇诲彇瀛樻。
-     * @returns {Object|null} 瀛樻。鏁版嵁锛屾病鏈夊氨杩斿洖null
+     * 读取存档
+     * @returns {Object|null} 存档数据，没有就返回null
      */
     load: function() {
         try {
@@ -226,89 +226,89 @@ const Save = {
             const packet = JSON.parse(raw);
             return packet.data;
         } catch(e) {
-            console.error('璇绘。澶辫触:', e);
+            console.error('读档失败:', e);
             return null;
         }
     },
 
     /**
-     * 娓呴櫎瀛樻。
+     * 清除存档
      */
     clear: function() {
         localStorage.removeItem(this.KEY);
     }
 };
-</script>
-<script>/**
+
+/**
  * ============================================================
- * engine.js 鈥?璧屽崥妯℃嫙鍣ㄤ富寮曟搸
+ * engine.js — 赌博模拟器主引擎
  * ============================================================
  * 
- * 鑱岃矗锛?
- *   - 绠＄悊鐜╁鏁版嵁
- *   - 鏄剧ず涓昏彍鍗?
- *   - 鍒囨崲鍚勪釜娓告垙
- *   - 鏇存柊鐘舵€佹爮鍜屾棩蹇?
+ * 职责：
+ *   - 管理玩家数据
+ *   - 显示主菜单
+ *   - 切换各个游戏
+ *   - 更新状态栏和日志
  * 
- * 鍚勪釜娓告垙鍦?js/games/ 涓嬶紝鏄嫭绔嬬殑妯″潡銆?
+ * 各个游戏在 js/games/ 下，是独立的模块。
  */
 
 // ============================================================
-// 1. 鐜╁鏁版嵁
+// 1. 玩家数据
 // ============================================================
-// 鍏堣瘯璇曡瀛樻。锛屾病鏈夊氨鏂板缓
+// 先试试读存档，没有就新建
 let saved = Save.load();
 const Player = saved || {
-    cash: 50,       // 鐜伴噾
-    dignity: 100,   // 灏婁弗鍊?
-    debt: 0,        // 鍊哄姟
+    cash: 50,       // 现金
+    dignity: 100,   // 尊严值
+    debt: 0,        // 债务
     loanActive: false,
     loanAmount: 0,
     loanDays: 0,
     loanMaxDays: 0,
-    workCount: 0,   // 浠婃棩鎵撳伐娆℃暟
-    day: 1          // 娓告垙澶╂暟
+    workCount: 0,   // 今日打工次数
+    day: 1          // 游戏天数
 };
 
 // ============================================================
-// 2. 娓告垙閰嶇疆
+// 2. 游戏配置
 // ============================================================
-// 姣忎釜娓告垙鍐欐垚鐙珛鐨勯厤缃」锛屾柟渚夸互鍚庡啀鍔?
+// 每个游戏写成独立的配置项，方便以后再加
 const GAMES = [
-    { id: 'dice',    name: '璧屽ぇ灏?, icon: '馃幉', cash: 0,   dignity: 0  },
-    { id: 'scratch', name: '鍒埉涔?, icon: '馃帿', cash: 0,   dignity: 0  },
-    { id: 'pinball', name: '寮圭彔鏈?, icon: '馃暪', cash: 0,   dignity: 0  },
-    { id: 'work',    name: '鎵撳伐',   icon: '馃捈', cash: 0,   dignity: 0  },
-    { id: 'beg',     name: '涔炶',   icon: '馃', cash: 0,   dignity: 0  },
-    { id: 'loan',    name: '鍊熼挶',   icon: '馃挵', cash: 0,   dignity: 0  },
-    { id: 'poker',   name: '寰峰窞鎵戝厠', icon: '馃儚', cash: 500, dignity: 30 },
-    { id: 'soccer',  name: '璧岀悆',   icon: '鈿?, cash: 2000, dignity: 40 },
-    { id: 'horse',   name: '璧岄┈',   icon: '馃悗', cash: 2000, dignity: 40 },
-    { id: 'futures', name: '鐐掓湡璐?, icon: '馃搱', cash: 10000, dignity: 50 }
+    { id: 'dice',    name: '赌大小', icon: '🎲', cash: 0,   dignity: 0  },
+    { id: 'scratch', name: '刮刮乐', icon: '🎫', cash: 0,   dignity: 0  },
+    { id: 'pinball', name: '弹珠机', icon: '🕹', cash: 0,   dignity: 0  },
+    { id: 'work',    name: '打工',   icon: '💼', cash: 0,   dignity: 0  },
+    { id: 'beg',     name: '乞讨',   icon: '🪱', cash: 0,   dignity: 0  },
+    { id: 'loan',    name: '借钱',   icon: '💰', cash: 0,   dignity: 0  },
+    { id: 'poker',   name: '德州扑克', icon: '🃏', cash: 500, dignity: 30 },
+    { id: 'soccer',  name: '赌球',   icon: '⚽', cash: 2000, dignity: 40 },
+    { id: 'horse',   name: '赌马',   icon: '🐎', cash: 2000, dignity: 40 },
+    { id: 'futures', name: '炒期货', icon: '📈', cash: 10000, dignity: 50 }
 ];
 
 // ============================================================
-// 3. 宸ュ叿鍑芥暟
+// 3. 工具函数
 // ============================================================
 
-/** 鍙栧厓绱?*/
+/** 取元素 */
 function $(id) { return document.getElementById(id); }
 
-/** 鏇存柊鐘舵€佹爮 */
+/** 更新状态栏 */
 function updateStatus() {
     $('statusBar').innerHTML = `
-        <div class="stat"><div class="label">馃挵 鐜伴噾</div>
+        <div class="stat"><div class="label">💰 现金</div>
             <div class="value cash">$${Player.cash}</div></div>
-        <div class="stat"><div class="label">猸?灏婁弗</div>
+        <div class="stat"><div class="label">⭐ 尊严</div>
             <div class="value dignity">${Player.dignity}</div></div>
-        <div class="stat"><div class="label">馃捀 鍊哄姟</div>
+        <div class="stat"><div class="label">💸 债务</div>
             <div class="value debt">$${Player.debt}</div></div>
-        <div class="stat"><div class="label">馃搮 澶╂暟</div>
+        <div class="stat"><div class="label">📅 天数</div>
             <div class="value">${Player.day}</div></div>
     `;
 }
 
-/** 鍐欐棩蹇?*/
+/** 写日志 */
 function log(msg, type) {
     const el = $('logArea');
     const d = document.createElement('div');
@@ -318,14 +318,14 @@ function log(msg, type) {
     el.scrollTop = el.scrollHeight;
 }
 
-/** 淇濆瓨娓告垙 */
+/** 保存游戏 */
 function saveGame() {
     Save.save(Player);
 }
 
-/** 鏇存敼鐜伴噾骞惰嚜鍔ㄥ瓨鐩?*/
+/** 更改现金并自动存盘 */
 function addCash(amount) {
-    // amount 姝ｆ暟=璧㈤挶锛岃礋鏁?鎵ｉ挶
+    // amount 正数=赢钱，负数=扣钱
     Player.cash += amount;
     if (Player.cash < 0) Player.cash = 0;
     saveGame();
@@ -333,13 +333,13 @@ function addCash(amount) {
 }
 
 // ============================================================
-// 4. 涓昏彍鍗?
+// 4. 主菜单
 // ============================================================
 
 function showMenu() {
-    let html = '<h2>馃幇 璧屽崥妯℃嫙鍣?/h2>';
-    html += '<p>鐜伴噾: $' + Player.cash + ' | 灏婁弗: ' + Player.dignity;
-    html += ' | 鍊哄姟: $' + Player.debt + '</p>';
+    let html = '<h2>🎰 赌博模拟器</h2>';
+    html += '<p>现金: $' + Player.cash + ' | 尊严: ' + Player.dignity;
+    html += ' | 债务: $' + Player.debt + '</p>';
     html += '<div class="menu-grid" id="menuGrid"></div>';
     $('gameArea').innerHTML = html;
 
@@ -347,7 +347,7 @@ function showMenu() {
         const b = document.createElement('div');
         b.className = 'menu-btn';
 
-        // 妫€鏌ヨВ閿佹潯浠?
+        // 检查解锁条件
         const cashOk = Player.cash >= g.cash;
         const digOk = Player.dignity >= g.dignity;
         const locked = !cashOk || !digOk;
@@ -357,13 +357,13 @@ function showMenu() {
 
         b.onclick = function() {
             if (locked) {
-                let r = '馃敀 闇€瑕?;
+                let r = '🔒 需要';
                 if (Player.cash < g.cash) r += ' $' + g.cash;
-                if (Player.dignity < g.dignity) r += ' 灏婁弗' + g.dignity;
+                if (Player.dignity < g.dignity) r += ' 尊严' + g.dignity;
                 log(r, 'lose');
                 return;
             }
-            // 鍒囨崲鍒板搴旂殑娓告垙
+            // 切换到对应的游戏
             switch(g.id) {
                 case 'dice':    showDice(); break;
                 case 'scratch': showScratch(); break;
@@ -374,7 +374,7 @@ function showMenu() {
                 case 'poker':   showPoker(); break;
                 case 'soccer':  showSoccer(); break;
                 case 'horse':   showHorse(); break;
-                default:        log(g.name + ' 姝ｅ湪璺笂锝?, 'info');
+                default:        log(g.name + ' 正在路上～', 'info');
             }
         };
         $('menuGrid').appendChild(b);
@@ -382,31 +382,31 @@ function showMenu() {
 }
 
 // ============================================================
-// 5. 鎵撳伐绯荤粺
+// 5. 打工系统
 // ============================================================
 
 const JOBS = [
-    { name: '渚垮埄搴楁敹閾?, pay: 10 },
-    { name: '娲楃宸?,     pay: 15 },
-    { name: '鎼爾',       pay: 25 },
-    { name: '娓呮磥宸?,     pay: 12 }
+    { name: '便利店收银', pay: 10 },
+    { name: '洗碗工',     pay: 15 },
+    { name: '搬砖',       pay: 25 },
+    { name: '清洁工',     pay: 12 }
 ];
 const MAX_WORK = 5;
 
 function showWork() {
-    let h = '<h2>馃捈 鎵撳伐</h2>';
-    h += '<p>浠婃棩鎵撳伐: ' + Player.workCount + '/' + MAX_WORK + ' 娆?/p>';
+    let h = '<h2>💼 打工</h2>';
+    h += '<p>今日打工: ' + Player.workCount + '/' + MAX_WORK + ' 次</p>';
 
     if (Player.workCount >= MAX_WORK) {
-        h += '<p>馃槾 浠婂ぉ澶疮浜嗭紒</p>';
-        h += '<button class="btn" onclick="passDay()">鈴?杩囦竴澶?/button>';
+        h += '<p>😴 今天太累了！</p>';
+        h += '<button class="btn" onclick="passDay()">⏭ 过一天</button>';
     } else {
         JOBS.forEach(function(j) {
             h += '<button class="btn btn-win" onclick="doWork(' + j.pay + ')">'
-                 + j.name + ' 鈥?$' + j.pay + '</button> ';
+                 + j.name + ' — $' + j.pay + '</button> ';
         });
     }
-    h += '<br><button class="btn" onclick="showMenu()" style="margin-top:10px;">鈫?杩斿洖</button>';
+    h += '<br><button class="btn" onclick="showMenu()" style="margin-top:10px;">← 返回</button>';
     $('gameArea').innerHTML = h;
 }
 
@@ -416,7 +416,7 @@ function doWork(pay) {
     Player.workCount++;
     saveGame();
     updateStatus();
-    log('馃捈 璧氫簡 $' + pay, 'win');
+    log('💼 赚了 $' + pay, 'win');
     showWork();
 }
 
@@ -428,12 +428,12 @@ function passDay() {
         const owed = Math.floor(Player.loanAmount * Math.pow(1.05, Player.loanDays));
         Player.debt = owed;
         if (Player.loanDays > Player.loanMaxDays) {
-            log('馃拃 閫炬湡锛佸€轰富涓婇棬锛?, 'lose');
+            log('💀 逾期！债主上门！', 'lose');
         } else {
-            log('鈴?绗?' + Player.day + ' 澶╋紝鍊哄姟婊氬埌 $' + owed, 'lose');
+            log('⏭ 第 ' + Player.day + ' 天，债务滚到 $' + owed, 'lose');
         }
     } else {
-        log('鈴?绗?' + Player.day + ' 澶╋紝骞冲畨鏃犱簨', 'info');
+        log('⏭ 第 ' + Player.day + ' 天，平安无事', 'info');
     }
     saveGame();
     updateStatus();
@@ -441,7 +441,7 @@ function passDay() {
 }
 
 // ============================================================
-// 6. 涔炶
+// 6. 乞讨
 // ============================================================
 
 function doBeg() {
@@ -450,15 +450,15 @@ function doBeg() {
         const lost = Player.cash;
         Player.cash = 0;
         Player.dignity = Math.max(0, Player.dignity - 5);
-        log('馃 琚悓琛屾姠鍏?$' + lost + '锛佸皧涓?5', 'lose');
+        log('🪱 被同行抢光 $' + lost + '！尊严-5', 'lose');
     } else if (r < 0.5) {
         Player.dignity = Math.max(0, Player.dignity - 1);
-        log('馃 鍟ヤ篃娌¤鍒帮紝灏婁弗-1', 'lose');
+        log('🪱 啥也没讨到，尊严-1', 'lose');
     } else {
         const earned = Math.floor(Math.random() * 5) + 1;
         Player.cash += earned;
         Player.dignity = Math.max(0, Player.dignity - 2);
-        log('馃 璁ㄥ埌 $' + earned + '锛屽皧涓?2', 'win');
+        log('🪱 讨到 $' + earned + '，尊严-2', 'win');
     }
     saveGame();
     updateStatus();
@@ -466,7 +466,7 @@ function doBeg() {
 }
 
 // ============================================================
-// 7. 璧屽ぇ灏?
+// 7. 赌大小
 // ============================================================
 
 const DICE_ODDS = {
@@ -477,19 +477,19 @@ const DICE_ODDS = {
 function showDice() {
     let opts = '';
     for (let n = 2; n <= 12; n++) {
-        opts += '<option value="' + n + '">' + n + '鐐?' + DICE_ODDS[n] + '鍊?</option>';
+        opts += '<option value="' + n + '">' + n + '点(' + DICE_ODDS[n] + '倍)</option>';
     }
     $('gameArea').innerHTML = `
-        <h2>馃幉 璧屽ぇ灏?/h2>
-        <p>鏈€浣庝笅娉?$5</p>
+        <h2>🎲 赌大小</h2>
+        <p>最低下注 $5</p>
         <div style="text-align:center;font-size:48px;margin:15px 0;">
             <span class="dice" id="d1">?</span>
             <span class="dice" id="d2">?</span>
         </div>
-        <p>鎶?<select id="dB">${opts}</select>
-        涓嬫敞 $<input type="number" id="dA" value="5" min="5"></p>
-        <button class="btn btn-lose" onclick="rollDice()">馃幉 鎺烽瀛?/button>
-        <button class="btn" onclick="showMenu()">鈫?杩斿洖</button>
+        <p>押 <select id="dB">${opts}</select>
+        下注 $<input type="number" id="dA" value="5" min="5"></p>
+        <button class="btn btn-lose" onclick="rollDice()">🎲 掷骰子</button>
+        <button class="btn" onclick="showMenu()">← 返回</button>
     `;
 }
 
@@ -497,7 +497,7 @@ function rollDice() {
     const bet = parseInt($('dA').value);
     const guess = parseInt($('dB').value);
     if (bet < 5 || bet > Player.cash) {
-        log('閲戦鏃犳晥', 'lose');
+        log('金额无效', 'lose');
         return;
     }
     const d1 = Math.floor(Math.random() * 6) + 1;
@@ -509,65 +509,65 @@ function rollDice() {
     if (sum === guess) {
         const win = bet * DICE_ODDS[sum];
         addCash(win);
-        log('馃幉 涓簡 $' + win + '锛?, 'win');
+        log('🎲 中了 $' + win + '！', 'win');
     } else {
         addCash(-bet);
-        log('馃幉 杈撲簡 $' + bet, 'lose');
+        log('🎲 输了 $' + bet, 'lose');
     }
 }
 
 // ============================================================
-// 8. 鍒埉涔?
+// 8. 刮刮乐
 // ============================================================
 
 function showScratch() {
     $('gameArea').innerHTML = `
-        <h2>馃帿 鍒埉涔?/h2>
-        <p>姣忓紶 $5</p>
-        <p style="font-size:40px;text-align:center;margin:20px 0;" id="scratchResult">馃帿</p>
-        <button class="btn btn-warn" onclick="buyScratch()">涔颁竴寮?/button>
-        <button class="btn" onclick="showMenu()">鈫?杩斿洖</button>
+        <h2>🎫 刮刮乐</h2>
+        <p>每张 $5</p>
+        <p style="font-size:40px;text-align:center;margin:20px 0;" id="scratchResult">🎫</p>
+        <button class="btn btn-warn" onclick="buyScratch()">买一张</button>
+        <button class="btn" onclick="showMenu()">← 返回</button>
     `;
 }
 
 function buyScratch() {
-    if (Player.cash < 5) { log('娌￠挶浜?, 'lose'); return; }
+    if (Player.cash < 5) { log('没钱了', 'lose'); return; }
     addCash(-5);
     const r = Math.random();
     let p = 0, m = '';
-    if (r < 0.01) { p = 100; m = '馃挜 澶村 $100!!'; }
-    else if (r < 0.05) { p = 20; m = '馃帀 $20!'; }
-    else if (r < 0.20) { p = 6; m = '馃巿 $6'; }
-    else if (r < 0.40) { p = 1; m = '馃獧 $1'; }
-    else { m = '馃槩 娌′腑'; }
+    if (r < 0.01) { p = 100; m = '💥 头奖 $100!!'; }
+    else if (r < 0.05) { p = 20; m = '🎉 $20!'; }
+    else if (r < 0.20) { p = 6; m = '🎈 $6'; }
+    else if (r < 0.40) { p = 1; m = '🪙 $1'; }
+    else { m = '😢 没中'; }
     addCash(p);
-    $('scratchResult').textContent = p > 0 ? '馃帀 $' + p : '馃挃 娌′腑';
+    $('scratchResult').textContent = p > 0 ? '🎉 $' + p : '💔 没中';
     log(m, p > 0 ? 'win' : 'lose');
 }
 
 // ============================================================
-// 9. 寮圭彔鏈?
+// 9. 弹珠机
 // ============================================================
 
 function showPinball() {
     $('gameArea').innerHTML = `
-        <h2>馃暪 寮圭彔鏈?/h2>
-        <p>$5 涓€娆?/p>
-        <p style="font-size:40px;text-align:center;margin:20px 0;" id="pinballResult">馃幆</p>
-        <button class="btn btn-lose" onclick="playPinball()">鎶曞脊</button>
-        <button class="btn" onclick="showMenu()">鈫?杩斿洖</button>
+        <h2>🕹 弹珠机</h2>
+        <p>$5 一次</p>
+        <p style="font-size:40px;text-align:center;margin:20px 0;" id="pinballResult">🎯</p>
+        <button class="btn btn-lose" onclick="playPinball()">投弹</button>
+        <button class="btn" onclick="showMenu()">← 返回</button>
     `;
 }
 
 function playPinball() {
-    if (Player.cash < 5) { log('娌￠挶浜?, 'lose'); return; }
+    if (Player.cash < 5) { log('没钱了', 'lose'); return; }
     addCash(-5);
     const holes = [
-        { r: 0.05, p: 30, n: '馃幆 涓績澶у' },
-        { r: 0.10, p: 12, n: '馃數 钃濇礊' },
-        { r: 0.20, p: 5,  n: '馃煝 缁挎礊' },
-        { r: 0.30, p: 2,  n: '馃煛 榛勬礊' },
-        { r: 0.35, p: 0,  n: '鈿?绌烘礊' }
+        { r: 0.05, p: 30, n: '🎯 中心大奖' },
+        { r: 0.10, p: 12, n: '🔵 蓝洞' },
+        { r: 0.20, p: 5,  n: '🟢 绿洞' },
+        { r: 0.30, p: 2,  n: '🟡 黄洞' },
+        { r: 0.35, p: 0,  n: '⚫ 空洞' }
     ];
     const ra = Math.random();
     let cu = 0, re = holes[holes.length - 1];
@@ -578,46 +578,46 @@ function playPinball() {
     if (re.p > 0) {
         addCash(re.p);
         $('pinballResult').textContent = re.n;
-        log('馃暪 ' + re.n + ' $' + re.p, 'win');
+        log('🕹 ' + re.n + ' $' + re.p, 'win');
     } else {
-        $('pinballResult').textContent = '馃挩 娌′腑';
-        log('馃暪 绌烘礊', 'lose');
+        $('pinballResult').textContent = '💨 没中';
+        log('🕹 空洞', 'lose');
     }
 }
 
 // ============================================================
-// 10. 鍊熼挶
+// 10. 借钱
 // ============================================================
 
 const LOANS = [
-    { level: '灏忛', a: 500, r: 0.05, md: 7 },
-    { level: '涓', a: 2000, r: 0.08, md: 14 },
-    { level: '澶ч', a: 5000, r: 0.12, md: 30 }
+    { level: '小额', a: 500, r: 0.05, md: 7 },
+    { level: '中额', a: 2000, r: 0.08, md: 14 },
+    { level: '大额', a: 5000, r: 0.12, md: 30 }
 ];
 
 function showLoan() {
-    let h = '<h2>馃挵 楂樺埄璐?/h2>';
+    let h = '<h2>💰 高利贷</h2>';
     if (Player.loanActive) {
         const owed = Math.floor(Player.loanAmount * Math.pow(1.05, Player.loanDays));
-        h += '<p style="color:#e94560;">娆犳 $' + owed + ' (' + Player.loanDays + '/' + Player.loanMaxDays + '澶?</p>';
-        h += '<button class="btn btn-lose" onclick="repayLoan()">馃捀 杩樻竻 $' + owed + '</button> ';
-        h += '<button class="btn" onclick="passDay()">鈴?杩囦竴澶?/button>';
+        h += '<p style="color:#e94560;">欠款 $' + owed + ' (' + Player.loanDays + '/' + Player.loanMaxDays + '天)</p>';
+        h += '<button class="btn btn-lose" onclick="repayLoan()">💸 还清 $' + owed + '</button> ';
+        h += '<button class="btn" onclick="passDay()">⏭ 过一天</button>';
     } else {
-        h += '<table class="loan-table"><tr><th>绾у埆</th><th>棰濆害</th><th>鏃ユ伅</th><th>鏈熼檺</th></tr>';
+        h += '<table class="loan-table"><tr><th>级别</th><th>额度</th><th>日息</th><th>期限</th></tr>';
         LOANS.forEach(function(l) {
-            h += '<tr><td>' + l.level + '</td><td>$' + l.a + '</td><td>' + (l.r * 100) + '%</td><td>' + l.md + '澶?/td></tr>';
+            h += '<tr><td>' + l.level + '</td><td>$' + l.a + '</td><td>' + (l.r * 100) + '%</td><td>' + l.md + '天</td></tr>';
         });
         h += '</table>';
         LOANS.forEach(function(l, i) {
-            h += '<button class="btn btn-warn" onclick="takeLoan(' + i + ')">鍊?$' + l.a + '</button> ';
+            h += '<button class="btn btn-warn" onclick="takeLoan(' + i + ')">借 $' + l.a + '</button> ';
         });
     }
-    h += '<br><button class="btn" onclick="showMenu()" style="margin-top:10px;">鈫?杩斿洖</button>';
+    h += '<br><button class="btn" onclick="showMenu()" style="margin-top:10px;">← 返回</button>';
     $('gameArea').innerHTML = h;
 }
 
 function takeLoan(i) {
-    if (Player.loanActive) { log('宸叉湁璐锋', 'lose'); return; }
+    if (Player.loanActive) { log('已有贷款', 'lose'); return; }
     Player.cash += LOANS[i].a;
     Player.loanActive = true;
     Player.loanAmount = LOANS[i].a;
@@ -626,13 +626,13 @@ function takeLoan(i) {
     Player.debt = LOANS[i].a;
     saveGame();
     updateStatus();
-    log('馃挵 鍊熶簡 $' + LOANS[i].a, 'info');
+    log('💰 借了 $' + LOANS[i].a, 'info');
     showMenu();
 }
 
 function repayLoan() {
     const owed = Math.floor(Player.loanAmount * Math.pow(1.05, Player.loanDays));
-    if (Player.cash < owed) { log('涓嶅閽?, 'lose'); return; }
+    if (Player.cash < owed) { log('不够钱', 'lose'); return; }
     Player.cash -= owed;
     Player.loanActive = false;
     Player.loanAmount = 0;
@@ -640,16 +640,16 @@ function repayLoan() {
     Player.debt = 0;
     saveGame();
     updateStatus();
-    log('鉁?杩樻竻浜嗭紒', 'win');
+    log('✅ 还清了！', 'win');
     showMenu();
 }
 
 // ============================================================
-// 11. 楠板瓙鏍峰紡锛堝姩鎬佸姞鍦╤ead閲岋級
+// 11. 骰子样式（动态加在head里）
 // ============================================================
 
 (function() {
-    // 鍦ㄤ富椤垫坊鍔犻瀛愭牱寮?
+    // 在主页添加骰子样式
     const style = document.createElement('style');
     style.textContent = `
         .dice {
@@ -672,14 +672,14 @@ function repayLoan() {
 })();
 
 // ============================================================
-// 12. 寰峰窞鎵戝厠
+// 12. 德州扑克
 // ============================================================
 
-const SUITS = ['鈾?,'鈾?,'鈾?,'鈾?], RANKS = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
-// 鑺辫壊棰滆壊锛氣櫊鈾ｉ粦鑹?鈾モ櫐绾㈣壊
-function cardColor(su) { return (su==='鈾?||su==='鈾?)?'#e94560':'#333'; }
-const AI_NAMES = ['鑰佺嫄鐙?,'灏忕櫧鍏?,'绉冮公'], AI_LEVELS = ['楂樻墜','鑿滈浮','鏅€?];
-const HAND_NAMES = {RF:'鐨囧鍚岃姳椤?,SF:'鍚岃姳椤?,'4ok':'鍥涙潯',FH:'钁姦',FL:'鍚岃姳',ST:'椤哄瓙',TK:'涓夋潯','2P':'涓ゅ','1P':'涓€瀵?,HC:'楂樼墝'};
+const SUITS = ['♠','♥','♦','♣'], RANKS = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+// 花色颜色：♠♣黑色 ♥♦红色
+function cardColor(su) { return (su==='♥'||su==='♦')?'#e94560':'#333'; }
+const AI_NAMES = ['老狐狸','小白兔','秃鹫'], AI_LEVELS = ['高手','菜鸡','普通'];
+const HAND_NAMES = {RF:'皇家同花顺',SF:'同花顺','4ok':'四条',FH:'葫芦',FL:'同花',ST:'顺子',TK:'三条','2P':'两对','1P':'一对',HC:'高牌'};
 let pokerState = {};
 
 function createDeck() {
@@ -718,11 +718,11 @@ function evalHand(c) {
 function aiAct(lv, hand, com, pot, cb, chip, ab) {
     let ev = evalHand([...hand,...com]), st = ev.rank+ev.high/100, r = Math.random(), tc = cb-ab;
     switch(lv) {
-        case '楂樻墜':
+        case '高手':
             if (st>4.5) return r<0.7?{a:'r',am:Math.floor(pot*(0.5+r*0.5))+tc}:{a:'c'};
             else if (st>2) { if (tc===0) return {a:'k'}; return tc/pot<0.2?{a:'c'}:{a:'f'}; }
             else { if (r<0.15) return {a:'r',am:Math.floor(pot*0.5)+(tc>0?tc:0)}; if (tc===0) return {a:'k'}; return tc/pot>0.3?{a:'c'}:{a:'f'}; }
-        case '鏅€?:
+        case '普通':
             if (st>5) return r<0.4?{a:'r',am:Math.floor(pot*0.3)+tc}:{a:'c'};
             else if (st>2) { if (tc===0) return {a:'k'}; return tc/pot<0.3?{a:'c'}:{a:'f'}; }
             else { if (tc<=0||r<0.05) return {a:'k'}; return {a:'f'}; }
@@ -734,21 +734,21 @@ function aiAct(lv, hand, com, pot, cb, chip, ab) {
 }
 
 function showPoker() {
-    $('gameArea').innerHTML = '<h2>馃儚 寰峰窞鎵戝厠</h2>'
+    $('gameArea').innerHTML = '<h2>🃏 德州扑克</h2>'
         + '<div style="background:#0a0a05;border:1px solid #3d2a00;border-radius:8px;padding:10px;margin-bottom:10px;font-size:12px;color:#c0b090;">'
-        + '<b style="color:#f5d68e;">馃摉 瑙勫垯</b><br>姣忎汉2寮犲簳鐗?5寮犲叕鍏辩墝7閫?姣斿ぇ灏?br>'
-        + '杞锛氱炕鐗屽墠鈫掔炕鐗?3寮?鈫掕浆鐗?1寮?鈫掓渤鐗?1寮?鈫掓憡鐗?br>'
-        + '鎿嶄綔锛氳繃鐗?璺熸敞/鍔犳敞/寮冪墝<br>AI鎽婄墝鎵嶄寒搴曠墝</div>'
-        + '<p style="text-align:center;color:#a08050;">閫夋嫨鐩叉敞绾у埆</p>'
+        + '<b style="color:#f5d68e;">📖 规则</b><br>每人2张底牌+5张公共牌7选5比大小<br>'
+        + '轮次：翻牌前→翻牌(3张)→转牌(1张)→河牌(1张)→摊牌<br>'
+        + '操作：过牌/跟注/加注/弃牌<br>AI摊牌才亮底牌</div>'
+        + '<p style="text-align:center;color:#a08050;">选择盲注级别</p>'
         + '<div style="text-align:center;">'
-        + '<button class="btn btn-win" onclick="startPoker(50)">浣?$50</button> '
-        + '<button class="btn btn-warn" onclick="startPoker(250)">涓?$250</button> '
-        + '<button class="btn btn-lose" onclick="startPoker(500)">楂?$500</button></div>'
-        + '<button class="btn" onclick="showMenu()" style="margin-top:10px;">鈫?杩斿洖</button>';
+        + '<button class="btn btn-win" onclick="startPoker(50)">低 $50</button> '
+        + '<button class="btn btn-warn" onclick="startPoker(250)">中 $250</button> '
+        + '<button class="btn btn-lose" onclick="startPoker(500)">高 $500</button></div>'
+        + '<button class="btn" onclick="showMenu()" style="margin-top:10px;">← 返回</button>';
 }
 
 function startPoker(bl) {
-    if (Player.cash < bl*10) { log('闇€瑕?'+(bl*10),'lose'); return; }
+    if (Player.cash < bl*10) { log('需要$'+(bl*10),'lose'); return; }
     addCash(-bl*10);
     pokerState = {
         blind:bl, deck:createDeck(), ph:[], ah:[], com:[], pot:0, stage:'p',
@@ -775,19 +775,19 @@ function renderPoker() {
     let s = pokerState, pc = '<div class="hand-cards">'+s.ph.map(c=>cardHTML(c)).join('')+'</div>';
     let cc = s.com.length>0 ? '<div class="hand-cards">'+s.com.map(c=>cardHTML(c)).join('')+'</div>' : '';
     let cd = s.com.length===0?'':cc;
-    let sn = {p:'缈荤墝鍓?,f:'缈荤墝',t:'杞墝',r:'娌崇墝'};
-    let h = '<h2>馃儚 寰峰窞鎵戝厠</h2><p style="text-align:center;font-size:12px;color:#a08050;">'+sn[s.stage]+' | 搴曟睜$'+s.pot+'</p>';
+    let sn = {p:'翻牌前',f:'翻牌',t:'转牌',r:'河牌'};
+    let h = '<h2>🃏 德州扑克</h2><p style="text-align:center;font-size:12px;color:#a08050;">'+sn[s.stage]+' | 底池$'+s.pot+'</p>';
     h += '<div style="display:flex;justify-content:space-around;margin:8px 0;font-size:12px;">';
     for (let i = 0; i < 3; i++) {
-        let fld = s.fd[i+1]?'寮冪墝':'';
+        let fld = s.fd[i+1]?'弃牌':'';
         let bt = s.ab[i+1]>0?'$'+s.ab[i+1]:'';
         let hd = s.ro&&s.ah[i]?s.ah[i].map(c=>cardHTML(c)).join(''):'<span class="card-back"></span><span class="card-back"></span>';
         h += '<div><b>'+AI_NAMES[i]+'</b> '+fld+'<br>'+hd+'<br><small>$'+s.ch[i+1]+' '+bt+'</small></div>';
     }
     h += '</div><div style="text-align:center;font-size:16px;margin:8px 0;">'+cd+'</div>';
     h += '<div style="text-align:center;font-size:16px;margin:6px 0;">'+pc+'</div>';
-    h += '<p style="text-align:center;">浣?| $'+s.ch[0];
-    if (s.pb>0) h += ' 涓嬫敞$'+s.pb;
+    h += '<p style="text-align:center;">你 | $'+s.ch[0];
+    if (s.pb>0) h += ' 下注$'+s.pb;
     h += '</p>';
     if (s.acts.length>0) {
         h += '<div style="font-size:11px;color:#8a7050;margin:6px 0;">';
@@ -797,17 +797,17 @@ function renderPoker() {
     let tc = s.cb-s.pb;
     if (!s.ro && !s.fd[0] && s.ch[0]>0) {
         h += '<div style="text-align:center;margin-top:8px;">';
-        if (tc===0) h += '<button class="btn btn-win btn-sm" onclick="pokerAct(\'k\')">杩囩墝</button> ';
-        if (tc>0) h += '<button class="btn btn-lose btn-sm" onclick="pokerAct(\'c\')">璺熸敞$'+tc+'</button> ';
+        if (tc===0) h += '<button class="btn btn-win btn-sm" onclick="pokerAct(\'k\')">过牌</button> ';
+        if (tc>0) h += '<button class="btn btn-lose btn-sm" onclick="pokerAct(\'c\')">跟注$'+tc+'</button> ';
         if (s.ch[0]>tc) {
             let mr = Math.max(tc+Math.floor(s.blind/2),tc*2);
-            h += '<button class="btn btn-warn btn-sm" onclick="pokerAct(\'r\')">鍔犳敞</button> '
+            h += '<button class="btn btn-warn btn-sm" onclick="pokerAct(\'r\')">加注</button> '
                 + '<input type="number" id="rA" value="'+Math.min(mr,s.ch[0])+'" min="'+Math.min(mr,s.ch[0])+'" max="'+s.ch[0]+'" style="width:60px;">';
         }
-        h += ' <button class="btn btn-lose btn-sm" onclick="pokerAct(\'f\')">寮冪墝</button></div>';
+        h += ' <button class="btn btn-lose btn-sm" onclick="pokerAct(\'f\')">弃牌</button></div>';
     }
-    if (s.ro) h += '<button class="btn btn-win" onclick="showPoker()" style="display:block;margin:10px auto;">鍐嶆潵涓€灞€</button>';
-    h += '<button class="btn" onclick="showMenu()" style="margin-top:10px;">鈫?閫€鍑?/button>';
+    if (s.ro) h += '<button class="btn btn-win" onclick="showPoker()" style="display:block;margin:10px auto;">再来一局</button>';
+    h += '<button class="btn" onclick="showMenu()" style="margin-top:10px;">← 退出</button>';
     $('gameArea').innerHTML = h;
 }
 
@@ -815,10 +815,10 @@ function pokerAct(ac) {
     let s = pokerState; if (s.ro) return;
     let tc = s.cb - s.pb;
     switch(ac) {
-        case 'f': s.fd[0]=true; Player.cash+=s.ch[0]; s.ro=true; renderPoker(); log('寮冪墝','lose'); saveGame(); updateStatus(); return;
-        case 'k': s.pb = s.cb; s.acts.push('浣犺繃鐗?); break;
-        case 'c': if (tc>s.ch[0]) { log('绛圭爜涓嶅','lose'); return; } s.ch[0]-=tc; s.pb+=tc; s.pot+=tc; s.acts.push('浣犺窡娉?'+tc); break;
-        case 'r': let ra=parseInt($('rA').value); if (!ra||ra<=tc||ra>s.ch[0]) { log('鏃犳晥','lose'); return; } s.ch[0]-=ra; s.pb+=ra; s.pot+=ra; s.cb=s.pb; s.acts.push('浣犲姞娉ㄥ埌$'+s.pb); break;
+        case 'f': s.fd[0]=true; Player.cash+=s.ch[0]; s.ro=true; renderPoker(); log('弃牌','lose'); saveGame(); updateStatus(); return;
+        case 'k': s.pb = s.cb; s.acts.push('你过牌'); break;
+        case 'c': if (tc>s.ch[0]) { log('筹码不够','lose'); return; } s.ch[0]-=tc; s.pb+=tc; s.pot+=tc; s.acts.push('你跟注$'+tc); break;
+        case 'r': let ra=parseInt($('rA').value); if (!ra||ra<=tc||ra>s.ch[0]) { log('无效','lose'); return; } s.ch[0]-=ra; s.pb+=ra; s.pot+=ra; s.cb=s.pb; s.acts.push('你加注到$'+s.pb); break;
     }
     pokerProceed();
 }
@@ -832,16 +832,16 @@ function pokerProceed() {
             if (aiTc===0) continue;
             let dc = aiAct(AI_LEVELS[i-1], s.ah[i-1], s.com, s.pot, s.cb, s.ch[i], s.ab[i]);
             switch(dc.a) {
-                case'f': s.fd[i]=true; s.acts.push(AI_NAMES[i-1]+'寮冪墝'); break;
-                case'c': let ca=Math.min(aiTc,s.ch[i]); s.ch[i]-=ca; s.ab[i]+=ca; s.pot+=ca; if(ca>0)s.acts.push(AI_NAMES[i-1]+'璺熸敞$'+ca); else s.acts.push(AI_NAMES[i-1]+'杩囩墝'); break;
-                case'r': let ra2=Math.min(dc.am,s.ch[i]); if(ra2<=s.cb-s.ab[i]){let ca2=Math.min(s.cb-s.ab[i],s.ch[i]);s.ch[i]-=ca2;s.ab[i]+=ca2;s.pot+=ca2;s.acts.push(AI_NAMES[i-1]+'璺熸敞$'+ca2);break;} s.ch[i]-=ra2; s.ab[i]+=ra2; s.pot+=ra2; s.cb=Math.max(s.cb,s.ab[i]); s.acts.push(AI_NAMES[i-1]+'鍔犳敞鍒?'+s.ab[i]); break;
+                case'f': s.fd[i]=true; s.acts.push(AI_NAMES[i-1]+'弃牌'); break;
+                case'c': let ca=Math.min(aiTc,s.ch[i]); s.ch[i]-=ca; s.ab[i]+=ca; s.pot+=ca; if(ca>0)s.acts.push(AI_NAMES[i-1]+'跟注$'+ca); else s.acts.push(AI_NAMES[i-1]+'过牌'); break;
+                case'r': let ra2=Math.min(dc.am,s.ch[i]); if(ra2<=s.cb-s.ab[i]){let ca2=Math.min(s.cb-s.ab[i],s.ch[i]);s.ch[i]-=ca2;s.ab[i]+=ca2;s.pot+=ca2;s.acts.push(AI_NAMES[i-1]+'跟注$'+ca2);break;} s.ch[i]-=ra2; s.ab[i]+=ra2; s.pot+=ra2; s.cb=Math.max(s.cb,s.ab[i]); s.acts.push(AI_NAMES[i-1]+'加注到$'+s.ab[i]); break;
             }
             let rm = [0,1,2,3].filter(j=>!s.fd[j]&&s.ch[j]>0);
             if (rm.length<=1) {
                 s.ro=true; Player.cash+=s.ch[0];
                 let rk=Math.floor(s.pot*0.1); s.pot-=rk;
-                if (rm[0]===0) { Player.cash+=s.pot; log('浣犺耽浜?'+s.pot,'win'); }
-                else { s.ch[rm[0]]+=s.pot; log(AI_NAMES[rm[0]-1]+'璧簡$'+s.pot,'lose'); }
+                if (rm[0]===0) { Player.cash+=s.pot; log('你赢了$'+s.pot,'win'); }
+                else { s.ch[rm[0]]+=s.pot; log(AI_NAMES[rm[0]-1]+'赢了$'+s.pot,'lose'); }
                 saveGame(); updateStatus(); renderPoker(); return;
             }
         }
@@ -855,9 +855,9 @@ function pokerProceed() {
 function pokerNextStage() {
     let s = pokerState;
     switch(s.stage) {
-        case 'p': s.deck.pop(); s.com.push(s.deck.pop(),s.deck.pop(),s.deck.pop()); s.stage='f'; s.acts.push('缈荤墝'); break;
-        case 'f': s.deck.pop(); s.com.push(s.deck.pop()); s.stage='t'; s.acts.push('杞墝'); break;
-        case 't': s.deck.pop(); s.com.push(s.deck.pop()); s.stage='r'; s.acts.push('娌崇墝'); break;
+        case 'p': s.deck.pop(); s.com.push(s.deck.pop(),s.deck.pop(),s.deck.pop()); s.stage='f'; s.acts.push('翻牌'); break;
+        case 'f': s.deck.pop(); s.com.push(s.deck.pop()); s.stage='t'; s.acts.push('转牌'); break;
+        case 't': s.deck.pop(); s.com.push(s.deck.pop()); s.stage='r'; s.acts.push('河牌'); break;
         case 'r': pokerShowdown(); return;
     }
     s.pb=0; s.ab=[0,0,0]; s.cb=0;
@@ -876,21 +876,21 @@ function pokerShowdown() {
     let wa=Math.floor(s.pot/wn.length);
     wn.forEach(j=>{if(j===0)Player.cash+=wa;else s.ch[j]+=wa;});
     let msg='';
-    if(wn.length===1&&wn[0]===0)msg='浣犺耽浜嗭紒'+HAND_NAMES[bn]+'锛?'+wa;
-    else if(wn.includes(0))msg='骞冲眬锛?+HAND_NAMES[bn]+' 浣犲緱$'+wa;
-    else msg=AI_NAMES[wn[0]-1]+'璧簡 '+HAND_NAMES[bn]+' $'+wa;
+    if(wn.length===1&&wn[0]===0)msg='你赢了！'+HAND_NAMES[bn]+'！$'+wa;
+    else if(wn.includes(0))msg='平局！'+HAND_NAMES[bn]+' 你得$'+wa;
+    else msg=AI_NAMES[wn[0]-1]+'赢了 '+HAND_NAMES[bn]+' $'+wa;
     log(msg,wn.includes(0)?'win':'lose');
     saveGame(); updateStatus(); renderPoker();
 }
 
 // ============================================================
-// 13. 璧岀悆
+// 13. 赌球
 // ============================================================
 
 const TEAMS = [
-    {n:'鎴愰兘钃夊煄',s:85},{n:'涓婃捣娴锋腐',s:90},{n:'鍖椾含鍥藉畨',s:80},
-    {n:'灞变笢娉板北',s:75},{n:'骞垮窞鎭掑ぇ',s:70},{n:'娣卞湷楣忓煄',s:65},
-    {n:'姝︽眽涓夐晣',s:60},{n:'澶╂触娲ラ棬铏?,s:55}
+    {n:'成都蓉城',s:85},{n:'上海海港',s:90},{n:'北京国安',s:80},
+    {n:'山东泰山',s:75},{n:'广州恒大',s:70},{n:'深圳鹏城',s:65},
+    {n:'武汉三镇',s:60},{n:'天津津门虎',s:55}
 ];
 let soccerGame = {};
 
@@ -898,20 +898,20 @@ function showSoccer() {
     let t=[]; for(let i=0;i<4;i++){let idx=Math.floor(Math.random()*TEAMS.length);if(t.indexOf(idx)<0)t.push(idx);else i--;}
     let ht=TEAMS[t[0]], at=TEAMS[t[1]];
     soccerGame = {h:ht, a:at};
-    $('gameArea').innerHTML = '<h2>鈿?璧岀悆</h2>'
+    $('gameArea').innerHTML = '<h2>⚽ 赌球</h2>'
         + '<p>'+ht.n+' vs '+at.n+'</p>'
-        + '<p>璧旂巼锛氫富鑳?+(200-ht.s)+'% 瀹㈣儨'+(200-at.s)+'% 骞?0%</p>'
-        + '<button class="btn" onclick="soccerBet(\'h\')">鎶间富鑳?/button> '
-        + '<button class="btn" onclick="soccerBet(\'a\')">鎶煎鑳?/button> '
-        + '<button class="btn" onclick="soccerBet(\'d\')">鎶煎钩灞€</button><br>'
-        + '<p style="color:#e94560;font-size:11px;">鏈€浣庝笅娉?$5000</p><p>涓嬫敞 $<input type="number" id="sBA" value="5000" min="5000"></p>'
+        + '<p>赔率：主胜'+(200-ht.s)+'% 客胜'+(200-at.s)+'% 平30%</p>'
+        + '<button class="btn" onclick="soccerBet(\'h\')">押主胜</button> '
+        + '<button class="btn" onclick="soccerBet(\'a\')">押客胜</button> '
+        + '<button class="btn" onclick="soccerBet(\'d\')">押平局</button><br>'
+        + '<p style="color:#e94560;font-size:11px;">最低下注 $5000</p><p>下注 $<input type="number" id="sBA" value="5000" min="5000"></p>'
         + '<div id="sR"></div>'
-        + '<button class="btn" onclick="showMenu()" style="margin-top:10px;">鈫?杩斿洖</button>';
+        + '<button class="btn" onclick="showMenu()" style="margin-top:10px;">← 返回</button>';
 }
 
 function soccerBet(tp) {
     let amt = parseInt($('sBA').value);
-    if (!amt||amt<5000||amt>Player.cash) { log('鏈€浣?5000','lose'); return; }
+    if (!amt||amt<5000||amt>Player.cash) { log('最低$5000','lose'); return; }
     let s = soccerGame;
     let r = Math.random()*100, hW=200-s.h.s, aW=200-s.a.s, dW=30, tot=hW+aW+dW;
     let hP=hW/tot, aP=(hW+aW)/tot, win='';
@@ -921,18 +921,18 @@ function soccerBet(tp) {
     if (win===tp) {
         let w = amt*odds[tp];
         addCash(w+amt);
-        log('鈿?璧簡锛?'+(w+amt),'win');
+        log('⚽ 赢了！$'+(w+amt),'win');
     } else {
-        log('鈿?杈撲簡 $'+amt,'lose');
+        log('⚽ 输了 $'+amt,'lose');
     }
-    showSoccer(); // 鑷姩鎹笅涓€鍦?
+    showSoccer(); // 自动换下一场
 }
 
 // ============================================================
-// 14. 璧岄┈
+// 14. 赌马
 // ============================================================
 
-const HORSE_NAMES = ['璧ゅ厰','闂數','杩介','韪忛洩'];
+const HORSE_NAMES = ['赤兔','闪电','追风','踏雪'];
 let horseGame = {};
 
 function showHorse() {
@@ -945,19 +945,19 @@ function showHorse() {
     hs.forEach(x=>x.od=Math.floor(tstr/x.str*0.85*100)/100);
     horseGame = {hs:hs};
     let opt=''; hs.forEach((x,i)=>opt+='<option value="'+i+'">'+x.n+'</option>');
-    $('gameArea').innerHTML = '<h2>馃悗 璧岄┈</h2><p style="color:#e94560;font-size:11px;">鏈€浣庝笅娉?$5000</p>'
+    $('gameArea').innerHTML = '<h2>🐎 赌马</h2><p style="color:#e94560;font-size:11px;">最低下注 $5000</p>'
         + '<div style="font-size:13px;">'
-        + hs.map((x,i)=>'<p>'+x.n+' 閫熷害'+x.sp+' 鑰愬姏'+x.st+' 璧旂巼'+x.od+'</p>').join('')
-        + '</div><p>鎶?<select id="hB">'+opt+'</select>'
+        + hs.map((x,i)=>'<p>'+x.n+' 速度'+x.sp+' 耐力'+x.st+' 赔率'+x.od+'</p>').join('')
+        + '</div><p>押 <select id="hB">'+opt+'</select>'
         + ' $<input type="number" id="hA" value="5000" min="5000">'
-        + '<br><button class="btn btn-lose" onclick="horseBet()">馃悗 涓嬫敞寮€璺?/button></p>'
-        + '<div id="hR"><p>閫変竴鍖归┈涓嬫敞锛?/p></div>'
-        + '<button class="btn" onclick="showMenu()" style="margin-top:10px;">鈫?杩斿洖</button>';
+        + '<br><button class="btn btn-lose" onclick="horseBet()">🐎 下注开跑</button></p>'
+        + '<div id="hR"><p>选一匹马下注！</p></div>'
+        + '<button class="btn" onclick="showMenu()" style="margin-top:10px;">← 返回</button>';
 }
 
 function horseBet() {
     let amt = parseInt($('hA').value), pick = parseInt($('hB').value);
-    if (!amt||amt<5000||amt>Player.cash) { log('闇€瑕?5000浠ヤ笂','lose'); return; }
+    if (!amt||amt<5000||amt>Player.cash) { log('需要$5000以上','lose'); return; }
     let g = horseGame;
     addCash(-amt);
     let res = [];
@@ -970,26 +970,27 @@ function horseBet() {
     if (win2===pick) {
         let w2 = Math.floor(amt*g.hs[pick].od);
         addCash(w2+amt);
-        log('馃悗 璧簡 $'+w2+'锛?+ordr,'win');
-        $('hR').innerHTML = '<p style="color:#4ecca3;">馃弳 '+g.hs[win2].n+'澶哄啝锛?'+w2+'</p>';
+        log('🐎 赢了 $'+w2+'！'+ordr,'win');
+        $('hR').innerHTML = '<p style="color:#4ecca3;">🏆 '+g.hs[win2].n+'夺冠！$'+w2+'</p>';
     } else {
-        log('馃悗 杈撲簡 $'+amt,'lose');
-        $('hR').innerHTML = '<p style="color:#e94560;">'+g.hs[win2].n+'澶哄啝锛佷綘杈撲簡</p>';
+        log('🐎 输了 $'+amt,'lose');
+        $('hR').innerHTML = '<p style="color:#e94560;">'+g.hs[win2].n+'夺冠！你输了</p>';
     }
 }
 
 // ============================================================
-// 15. 鍚姩娓告垙
+// 15. 启动游戏
 // ============================================================
 
 function init() {
     updateStatus();
     showMenu();
-    log('馃幇 娓告垙寮€濮嬶紒鏈噾 $50', 'info');
-    log('馃捑 鑷姩瀛樻。宸插紑鍚?, 'info');
+    log('🎰 游戏开始！本金 $50', 'info');
+    log('💾 自动存档已开启', 'info');
 }
 
 window.onload = init;
+
 </script>
 </body>
 </html>
