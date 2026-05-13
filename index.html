@@ -742,7 +742,7 @@
                     9: { text: '👑👑 皇家同花顺！！', color: '#4ecca3' }
                 };
                 const tip = tipMap[evalResult.rank] || tipMap[0];
-                handTip = `<div style="text-align:center;font-size:12px;color:${tip.color};margin:2px 0;">${tip.text}</div>`;
+                handTip = `<div style="text-align:center;font-size:11px;color:#888;margin:4px 0;">🃏 你当前的牌型</div><div style="text-align:center;font-size:20px;font-weight:bold;color:${tip.color};margin:2px 0;text-shadow:0 0 10px ${tip.color};}">${tip.text}</div>`;
             }
 
             // 公共牌
@@ -776,8 +776,10 @@
             // 公共牌
             html += `<div style="text-align:center;font-size:28px;margin:12px 0;">${communityDisplay}</div>`;
 
-            // 玩家手牌
+            // 牌型提示（放在公共牌正下方，更显眼）
             html += `${handTip}`;
+
+            // 玩家手牌
             html += `<div style="text-align:center;font-size:24px;margin:8px 0;">${playerCards}</div>`;
             html += `<p style="text-align:center;font-size:13px;">🧑 你 | 筹码: $${s.chips[0]}`;
             if (s.playerBet > 0) html += ` | 已下注: $${s.playerBet}`;
