@@ -234,6 +234,7 @@ const ACTIONS = [
     id: 'exam', name: '赴考', cost: 0,
     desc: '按功名逐级应试，中则改命',
     req: (S) => {
+      if (S.gender === '女') return '明制女子不得应举';
       if (S.flags.includes('方外')) return '出家之人不赴科场';
       if (S.flags.includes('乐籍')) return '乐户子弟不得应举';
       if (S.rank >= 4) return '已登进士，无需再考';
@@ -263,7 +264,7 @@ const ACTIONS = [
   {
     id: 'office', name: '理政', cost: 0,
     desc: '在任上做实事，攒政绩也攒名声',
-    req: (S) => (S.mourning > 0 ? '丁忧守制中' : S.office.granted ? true : '尚未入仕'),
+    req: (S) => (S.gender === '女' ? '女子不得入仕' : S.mourning > 0 ? '丁忧守制中' : S.office.granted ? true : '尚未入仕'),
     run: (S) => {
       const eff = Math.round((S.stats.才智 + S.stats.德行) / 20 + rnd(0, 3));
       S.office.power += eff; addStat('名声', 2);
@@ -310,7 +311,7 @@ const ACTIONS = [
   {
     id: 'yinguan', name: '门荫出仕', cost: 0,
     desc: '凭父祖之荫入监选官，不必科第',
-    req: (S) => (!S.flags.includes('门荫') ? '无门荫可恃' : S.age < 16 ? '年岁尚小' : S.office.granted ? '已有官身' : true),
+    req: (S) => (S.gender === '女' ? '门荫只及男丁' : !S.flags.includes('门荫') ? '无门荫可恃' : S.age < 16 ? '年岁尚小' : S.office.granted ? '已有官身' : true),
     run: (S) => {
       S.flags = S.flags.filter(f => f !== '门荫');
       S.office.granted = true;
@@ -441,7 +442,7 @@ ACTIONS.push(
   {
     id: 'clerk', name: '入衙做吏', cost: 0,
     desc: '钱粮刑名，来钱快，名声损',
-    req: (S) => (S.stats.才智 < 45 ? '才智不足（需 45）' : S.trade === 'li' ? '已在此行' : true),
+    req: (S) => (S.gender === '女' ? '女子不做衙吏' : S.stats.才智 < 45 ? '才智不足（需 45）' : S.trade === 'li' ? '已在此行' : true),
     run: (S) => {
       S.trade = 'li';
       const gain = rnd(3, 5);
@@ -458,6 +459,7 @@ ACTIONS.push(
     desc: '以命换军功，升迁看军功',
     req: (S) => {
       if (S.trade === 'jun') return true;
+      if (S.gender === '女') return '军户女眷不入伍';
       if (S.age < 16) return '年纪太小';
       if (S.age > 45) return '年岁已过';
       if (S.stats.体魄 < 55) return '体魄不足（需 55）';
@@ -1425,7 +1427,7 @@ ACTIONS.push(
   {
     id: 'monitor', name: '纳粟入监', cost: 0,
     desc: '捐一笔粟，换一个例监的名分，可直接应乡试',
-    req: (S) => (S.rank >= 2 ? '已有功名' : S.money >= 60 ? true : '需 60 贯'),
+    req: (S) => (S.gender === '女' ? '女子不得入监' : S.rank >= 2 ? '已有功名' : S.money >= 60 ? true : '需 60 贯'),
     run: (S) => {
       money(-60); S.rank = 2; addStat('名声', -4); S.flags.push('例监');
       return { lines: ['你纳粟入了国子监，从此可应乡试。清议说这是「铜臭功名」。'], cls: 'up' };
@@ -1465,3 +1467,125 @@ function ageBlocked(S, id) {
   if (S.age < need) return `年方 ${S.age} 岁，还做不得此事`;
   return null;
 }
+
+
+/* ================= 各行当的年入（按等级：学徒 → 宗师） ================= */
+const TRADE_INCOME = {
+  nong: [2, 4, 7, 12, 20],
+  jiang: [3, 5, 9, 15, 26],
+  shang: [4, 8, 15, 28, 50],
+  shu: [2, 4, 7, 12, 20],
+  yi: [3, 6, 10, 18, 30],
+  li: [2, 4, 6, 10, 16],
+  jun: [2, 4, 7, 12, 22],
+  song: [3, 6, 10, 18, 30],
+  mu: [4, 7, 12, 20, 35],
+  bu: [1, 3, 5, 9, 15],
+  seng: [1, 2, 4, 7, 12],
+  you: [2, 4, 7, 12, 20],
+  biao: [3, 6, 10, 18, 30],
+  cha: [2, 4, 7, 11, 18],
+  hua: [2, 4, 7, 13, 22]
+};
+
+/* ================= 职业事务：每年行当里的事 ================= */
+/* eff: money 贯 / skill 本行手艺 / fame 名声 / health 气血 / wit 才智 */
+const TRADE_EVENTS = {
+  nong: [
+    { t: '久旱', text: '入夏久旱，田里裂了口子，族里商量凑钱修渠。', opts: [
+      { label: '出钱修渠（8 贯）', need: 8, eff: { money: -8, skill: 3, fame: 3 }, say: '渠修成了，水进了田，族里记你一笔功。' },
+      { label: '去邻县帮工度荒', eff: { money: 3, skill: 1, health: -4 }, say: '你外出帮了半年工，家里少一张嘴，田里荒了些。' },
+      { label: '守着田等雨', eff: { money: -2, health: -2 }, say: '雨来得太晚，收成减了三成，人也熬瘦了。' }
+    ] },
+    { t: '牛疫', text: '村里病倒两头牛，眼看春耕要误。', opts: [
+      { label: '与人合买一头（6 贯）', need: 6, eff: { money: -6, skill: 2, fame: 1 }, say: '两家合用一头牛，春耕赶上了。' },
+      { label: '自己拉犁', eff: { health: -6, skill: 4 }, say: '你与兄弟轮流拉犁，肩膀磨破了，农活却更熟了。' },
+      { label: '改种杂粮', eff: { money: -1, skill: 1 }, say: '你改种豆黍，收成少些，总算没误农时。' }
+    ] }
+  ],
+  jiang: [
+    { t: '官府点匠', text: '县里要修衙署，点名征匠，去了管饭不给工钱。', opts: [
+      { label: '应征（手艺精进）', eff: { skill: 6, money: 0, health: -3 }, say: '你在衙署工地上做了三个月，见了不少好手艺。' },
+      { label: '使钱免役（5 贯）', need: 5, eff: { money: -5, skill: 1 }, say: '你托人说情，花钱免了这趟役。' },
+      { label: '推病不去', eff: { fame: -2, skill: 0 }, say: '差役骂了几句走了，行里有人说你滑头。' }
+    ] },
+    { t: '料子出错', text: '东家一批木料受潮变形，硬要你照旧做出来。', opts: [
+      { label: '照做，收工钱', eff: { money: 4, fame: -3 }, say: '东西勉强交差，东家没说什么，口碑却坏了。' },
+      { label: '退回料子重做', eff: { money: -3, fame: 4, skill: 2 }, say: '你赔了几贯，把活重做了一遍，东家从此只找你。' }
+    ] }
+  ],
+  shang: [
+    { t: '行市起落', text: '今年棉价忽高忽低，同行都在观望。', opts: [
+      { label: '囤一批等涨（10 贯本钱）', need: 10, eff: { money: 8, skill: 2 }, say: '你压了一仓棉，入冬涨价，转手赚了八贯。' },
+      { label: '按老规矩走货', eff: { money: 2, skill: 1 }, say: '你不赌行情，稳稳做了几笔。' },
+      { label: '合伙放账收息', eff: { money: 4, fame: -2 }, say: '你把钱放给急用的商户，利息不薄，名声稍损。' }
+    ] },
+    { t: '路遇盘查', text: '货船在关津被拦，税吏说要开箱验货。', opts: [
+      { label: '照章纳税（4 贯）', need: 4, eff: { money: -4, fame: 1 }, say: '你如数纳了税，单据齐全，一路顺畅。' },
+      { label: '塞钱了事（2 贯）', need: 2, eff: { money: -2, fame: -1 }, say: '税吏收了钱，箱子没开。' },
+      { label: '硬顶不放', eff: { money: -6, fame: 2 }, say: '你据理力争，货扣了三日，最后仍按章放行。' }
+    ] }
+  ],
+  yi: [
+    { t: '疑难症', text: '富户老母久病不愈，请了三位郎中都没起色。', opts: [
+      { label: '接下这桩（尽力施治）', eff: { skill: 5, money: 6, fame: 3 }, say: '你换了方子，老人渐渐能进食，富户重谢。' },
+      { label: '推辞不接', eff: { fame: -1 }, say: '你说自己学浅，不敢误人，富户另请高明。' },
+      { label: '请师父同去', eff: { skill: 3, money: 2, fame: 1 }, say: '你请师父一同诊治，学到了辨证的法子。' }
+    ] },
+    { t: '瘟疫', text: '城外几个村子起了时疫，官府设局施药。', opts: [
+      { label: '入局施药（危险）', eff: { skill: 6, fame: 6, health: -6 }, say: '你在疫区熬了一个月，救活不少人，自己也病了一场。' },
+      { label: '捐药不出人（5 贯）', need: 5, eff: { money: -5, fame: 3 }, say: '你捐了几味药，人没去，乡里仍念你的好。' },
+      { label: '闭门谢客', eff: { fame: -2, money: 1 }, say: '你关了门，安稳度过，坊间议论你惜命。' }
+    ] }
+  ],
+  li: [
+    { t: '案牍出错', text: '一桩田产案的文书出了岔子，上头要追责。', opts: [
+      { label: '自己担下', eff: { fame: 3, money: -2 }, say: '你把错认在自己身上，堂官记你一份厚道。' },
+      { label: '推到书办身上', eff: { fame: -3, money: 1 }, say: '事情推了出去，底下人心里不服。' },
+      { label: '连夜补正', eff: { skill: 4, health: -3 }, say: '你熬了三夜把卷宗补齐，没人再提这事。' }
+    ] },
+    { t: '上官索贿', text: '新来的主簿递话，说年节该“意思意思”。', opts: [
+      { label: '照送（8 贯）', need: 8, eff: { money: -8, fame: 1 }, say: '你送了礼，往后差事好办了些。' },
+      { label: '装作不懂', eff: { fame: -2, skill: 1 }, say: '你把话岔开了，主簿脸色不好看，差事也难做些。' },
+      { label: '托人转圜（3 贯）', need: 3, eff: { money: -3, skill: 2 }, say: '你托同僚递了几句软话，事情糊过去了。' }
+    ] }
+  ],
+  song: [
+    { t: '棘手讼案', text: '一户人家争继嗣，两房各执一词，出得起钱。', opts: [
+      { label: '接下，替弱房说话', eff: { money: 5, fame: 2, skill: 3 }, say: '你替孤儿寡母争回一份产业，县里传你的名。' },
+      { label: '接下，替强房说话', eff: { money: 9, fame: -4 }, say: '你替有钱那房赢了官司，钱袋鼓了，骂名也来了。' },
+      { label: '劝两家和解', eff: { money: 2, fame: 3, skill: 1 }, say: '你在祠堂里劝了半天，两家各让一步。' }
+    ] }
+  ],
+  mu: [
+    { t: '东家调任', text: '东翁要调任邻府，问你愿不愿随行。', opts: [
+      { label: '随行赴任', eff: { money: 6, skill: 4, health: -3 }, say: '你随东家走了几百里，新衙门里诸事从头理。' },
+      { label: '留乡另寻馆地', eff: { money: 1, skill: 1, fame: 1 }, say: '你留在本乡，另投了一位县尊。' },
+      { label: '趁势辞幕归耕', eff: { money: 0, fame: 1, health: 4 }, say: '你辞了幕，回乡住了半年，人也松快了。' }
+    ] }
+  ],
+  jun: [
+    { t: '边警', text: '北边传来警报，卫所要抽调人马。', opts: [
+      { label: '请缨出战', eff: { skill: 5, money: 3, health: -8, fame: 4 }, say: '你随队出塞，斩获不多，却立了名。' },
+      { label: '留守本卫', eff: { skill: 1, money: 1 }, say: '你留守城池，日子照旧。' },
+      { label: '使钱避调（6 贯）', need: 6, eff: { money: -6, fame: -3 }, say: '你花钱留在本卫，同袍背后议论。' }
+    ] }
+  ],
+  _any: [
+    { t: '行内是非', text: '{trade}行里起了争执，众人推你出来说句话。', opts: [
+      { label: '出面调停', eff: { fame: 2, skill: 2 }, say: '你把话说圆了，两边都欠你一份人情。' },
+      { label: '避而不问', eff: { fame: -1 }, say: '你躲开了，行里有人说你不担事。' },
+      { label: '趁势揽下活计', eff: { money: 4, fame: -1 }, say: '你趁机接了两笔活，钱挣了，人情薄了。' }
+    ] },
+    { t: '收徒', text: '有后生上门，想拜在你门下学手艺。', opts: [
+      { label: '收下，倾囊相授', eff: { fame: 4, money: 2, skill: 2 }, say: '你收了徒弟，教得严，行里都说你有传承。' },
+      { label: '收下，留一手', eff: { money: 3, fame: -1 }, say: '你收了束修，关键的几手没教。' },
+      { label: '婉拒', eff: {}, say: '你说自己还不到收徒的时候。' }
+    ] },
+    { t: '同业压价', text: '同行几家联手压价，要把生人挤出去。', opts: [
+      { label: '跟着降价硬撑', eff: { money: -3, skill: 2 }, say: '你撑了半年，本钱薄了些，客源稳住了。' },
+      { label: '做精不做多', eff: { money: 2, skill: 4, fame: 2 }, say: '你把活做细，反倒有人愿意多出钱。' },
+      { label: '另寻门路', eff: { money: 1, skill: 1 }, say: '你换了个地界做买卖，从头来过。' }
+    ] }
+  ]
+};

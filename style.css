@@ -213,3 +213,15 @@ h1{font-size:52px;letter-spacing:.35em;margin:0 0 6px;font-weight:600}
 .recent summary::before{content:'▸';margin-right:7px;color:var(--line);display:inline-block}
 .recent[open] summary::before{content:'▾'}
 .recent .log{max-height:168px;margin-top:4px}
+
+/* 职业进度与精力标注 */
+.trade-box{font-size:13px;color:var(--ink-2)}
+.trade-row{display:flex;justify-content:space-between;margin-bottom:5px}
+.trade-lv{color:var(--red)}
+.trade-meta{font-size:12px;color:var(--ink-2);line-height:1.6;margin-top:3px}
+.act{position:relative}
+.act .apc{
+  position:absolute;right:8px;top:8px;font-style:normal;font-size:11px;
+  color:var(--line);letter-spacing:0;
+}
+.act:disabled .apc{color:var(--line)}

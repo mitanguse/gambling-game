@@ -96,6 +96,8 @@ function newLife(famId, heir) {
     children: [],
     friends: 0,
     parents: { alive: true, age: 30, favor: 55 },
+    gender: Math.random() < 0.5 ? '男' : '女',
+    ap: 12, apMax: 12,
     log: [],
     over: false
   };
@@ -161,6 +163,11 @@ function render() {
   document.getElementById('hud-rank').textContent = rn;
   document.getElementById('hud-money').textContent = `家资 ${S.money} 贯`;
   document.getElementById('hud-health').textContent = `气血 ${S.health}`;
+  const apEl = document.getElementById('hud-ap');
+  if (apEl) apEl.textContent = `${seasonOf(S.ap)} · 精力 ${S.ap}/${S.apMax}`;
+  const gEl = document.getElementById('hud-gender');
+  if (gEl) gEl.textContent = `身 ${S.gender || '男'}`;
+  renderTrade();
 
   // 属性
   const st = document.getElementById('stat-list');
@@ -253,8 +260,65 @@ function groupOf(a) {
   return ACTION_GROUPS.find(g => g.ids.includes(a.id) || (g.prefix || []).some(p => a.id.startsWith(p)));
 }
 
+/* ---------- 精力：一年十二分，四季各三分 ---------- */
+const ACTION_AP = {
+  study: 3, farm: 4, work: 4, chores: 3, trade: 3, exam: 2, office: 4, marry: 2,
+  clinic: 1, heal: 1, piety: 2, teach: 2, land: 1, travel: 6, learn_med: 3,
+  practice_med: 4, teach_school: 4, clerk: 4, army: 4, craft: 4, quit_trade: 1,
+  'living_衣': 1, 'living_食': 1, 'living_住': 1, 'living_行': 1,
+  garden: 2, furniture: 1, guild: 1, publish: 2, monitor: 1, bridge: 2,
+  pawn_sell: 1, ask_money: 1, social: 1, yinguan: 2
+};
+
+function apCost(a) {
+  if (ACTION_AP[a.id] !== undefined) return ACTION_AP[a.id];
+  if (a.id.startsWith('open_')) return 2;
+  if (a.id.startsWith('join_')) return 3;
+  if (a.id.startsWith('work_')) return 3;
+  if (a.id.startsWith('trade_')) return 1;
+  if (a.id.startsWith('fun_')) return 1;
+  return 2;
+}
+
+function seasonOf(ap) {
+  if (ap >= 10) return '春';
+  if (ap >= 7) return '夏';
+  if (ap >= 4) return '秋';
+  return '冬';
+}
+
+/* ---------- 职业进度与年入 ---------- */
+function tradeIncome(S) {
+  const tbl = TRADE_INCOME[S.trade];
+  if (!tbl) return 0;
+  const lv = Math.max(0, tradeLevel(S));
+  return tbl[Math.min(tbl.length - 1, lv)] || 0;
+}
+
+function renderTrade() {
+  const box = document.getElementById('trade-box');
+  if (!box) return;
+  const d = tradeDef(S.trade);
+  if (!d) {
+    box.innerHTML = '<div class="trade-meta">尚无恒业。去「营生」寻一门手艺。</div>';
+    return;
+  }
+  const lv = Math.max(0, tradeLevel(S));
+  const steps = d.skill === '军功' ? MIL_STEPS : TRADE_STEPS;
+  const v = d.skill === '军功' ? S.mil.merit : Math.round(sk(S, d.skill));
+  const nextText = lv >= 4 ? '已至化境' : `再积 ${Math.max(1, steps[lv + 1] - v)} 点到「${d.ranks[lv + 1]}」`;
+  box.innerHTML =
+    `<div class="trade-row"><span>${d.name}</span><span class="trade-lv">${d.ranks[lv]}</span></div>` +
+    `<div class="bar y"><i style="width:${Math.min(100, v)}%"></i></div>` +
+    `<div class="trade-meta">${d.skill} ${v}${d.skill === '军功' ? '' : '/100'} · 年入约 ${tradeIncome(S)} 贯</div>` +
+    `<div class="trade-meta">${nextText}</div>`;
+}
+
 function actionState(a) {
-  return zuXunBlocked(S, a.id) || ageBlocked(S, a.id) || a.req(S);
+  const zx = zuXunBlocked(S, a.id) || ageBlocked(S, a.id) || a.req(S);
+  if (zx !== true) return zx;
+  if (S.ap < apCost(a)) return `精力不足（需 ${apCost(a)} 分，仅剩 ${S.ap} 分）`;
+  return true;
 }
 
 function actionButton(a) {
@@ -263,7 +327,7 @@ function actionButton(a) {
   const ds = a.descOf ? a.descOf(S) : a.desc;
   const btn = document.createElement('button');
   btn.className = 'act';
-  btn.innerHTML = `${nm}<small>${ok === true ? ds : ok}</small>`;
+  btn.innerHTML = `${nm}<small>${ok === true ? ds : ok}</small><i class="apc">${apCost(a)} 分</i>`;
   btn.disabled = ok !== true;
   btn.onclick = () => doAction(a);
   return btn;
@@ -354,6 +418,12 @@ function doAction(a) {
   if (zuXunBlocked(S, a.id)) return;
   const ab = ageBlocked(S, a.id);
   if (ab) return;
+  const cost = apCost(a);
+  if (S.ap < cost) {
+    scene('精力不济', `今年只剩 ${S.ap} 分精力，这件事要 ${cost} 分。\n换一件轻省的，或者等来年开春。`);
+    return;
+  }
+  S.ap -= cost;
   const res = a.run(S) || {};
   (res.lines || []).forEach(l => log(l, res.cls || ''));
   scene(a.name, (res.lines || ['无']).join('\n'));
@@ -392,15 +462,22 @@ function startFlow(name) {
 
 /* ---------- 婚姻：说媒 → 相看 → 合八字 → 下聘 → 成亲 ---------- */
 function makeCandidates(S) {
-  const fams = ['城南王掌柜家', '县学李教谕家', '东乡张农户家', '城中陈绸缎庄', '落第秀才周家', '城北刘屠户家'];
-  const names = ['王氏', '李氏', '张氏', '陈氏', '周氏', '刘氏'];
+  const wantWife = S.gender !== '女';
+  const fams = wantWife
+    ? ['城南王掌柜家', '县学李教谕家', '东乡张农户家', '城中陈绸缎庄', '落第秀才周家', '城北刘屠户家']
+    : ['城南王秀才家', '县学李教谕家', '东乡张农户家', '城中陈绸缎庄', '城北刘屠户家', '本县周主簿家'];
+  const names = wantWife
+    ? ['王氏', '李氏', '张氏', '陈氏', '周氏', '刘氏']
+    : ['王生', '李生', '张生', '陈生', '刘生', '周生'];
   const list = [];
   for (let i = 0; i < 3; i++) {
     const idx = rnd(0, fams.length - 1);
     const q = clamp(rnd(30, 80) + Math.floor(S.fame / 12));
     list.push({
-      name: names[idx], family: fams[idx], age: rnd(15, 21),
-      look: clamp(q + rnd(-12, 12)), virtue: clamp(q + rnd(-12, 12)),
+      name: names[idx], surname: names[idx].charAt(0), family: fams[idx],
+      age: rnd(15, 21),
+      look: clamp(q + rnd(-12, 12)),
+      virtue: clamp(q + rnd(-12, 12)),
       price: Math.max(4, Math.round(5 + q * 0.3 + S.fame * 0.2))
     });
   }
@@ -408,28 +485,48 @@ function makeCandidates(S) {
 }
 
 function marriageFlow() {
+  const isW = S.gender === '女';
+  const word = isW ? '嫁妆' : '聘礼';
   const cs = makeCandidates(S);
   S._cand = null;
   const opts = cs.map(c => ({
-    label: `${c.family}·${c.name}｜年 ${c.age}｜容貌 ${c.look}｜才德 ${c.virtue}｜聘礼约 ${c.price} 贯`,
+    label: `${c.family}·${c.name}｜年 ${c.age}｜容貌 ${c.look}｜才德 ${c.virtue}｜${word}约 ${c.price} 贯`,
     disabled: S.money < c.price,
-    run: () => { S._cand = c; log(`你随媒婆去${c.family}相看，见了${c.name}。`); }
+    run: () => {
+      S._cand = c;
+      log(isW ? `媒婆引你去庙里相看，隔着人群见了${c.name}一面。` : `你随媒婆去${c.family}相看，见了${c.name}。`);
+    }
   }));
   opts.push({ label: '都不中意，先不提亲', run: () => { S._cand = null; } });
-  if (S.money < 20) {
+  if (!isW && S.money < 20) {
     opts.push({ label: '聘礼凑不出，只能入赘他家', run: () => { S._cand = cs[0]; S._ruzhui = true; } });
   }
-  askStep('说媒', '媒婆递上三家庚帖，挨个说了一遍好话。你问清了门第、年岁与聘礼。', opts, () => {
+  if (isW && S.money < 20) {
+    opts.push({ label: '嫁妆凑不出，空手过门（名声 -3）', run: () => { S._cand = cs[0]; S._bare = true; } });
+  }
+  askStep('说媒', isW
+    ? '媒婆递上三家庚帖，说这三家门第都还过得去。你问清了年岁、人品，还有要备的嫁妆。'
+    : '媒婆递上三家庚帖，挨个说了一遍好话。你问清了门第、年岁与聘礼。', opts, () => {
     if (!S._cand) { log('你把庚帖退了回去，说再看看。'); return afterAction(); }
     if (S._ruzhui) {
       S._ruzhui = false;
       const c = S._cand;
-      S.spouse = { name: c.name, quality: Math.max(25, Math.round((c.look + c.virtue) / 2) - 18), age: c.age };
+      S.spouse = { name: c.name, surname: c.surname, quality: Math.max(25, Math.round((c.look + c.virtue) / 2) - 18), age: c.age, inLaw: true };
       addStat('名声', -3);
       S.flags.push('入赘');
       log(`你凑不出聘礼，只得入赘${c.family}。乡里背后议论，日子总算过起来了。`, 'down');
       S._cand = null;
       scene('入赘', '没有花轿，没有鼓乐，你挑着一担行李进了女家的门。');
+      return afterAction();
+    }
+    if (S._bare) {
+      S._bare = false;
+      const c = S._cand;
+      S.spouse = { name: c.name, surname: c.surname, quality: Math.round((c.look + c.virtue) / 2), age: c.age };
+      addStat('名声', -3);
+      log(`你空着手过了门，婆家脸色不大好看。`, 'down');
+      S._cand = null;
+      scene('过门', '一顶小轿，两个抬轿的，连吹鼓手都没有。');
       return afterAction();
     }
     baziStep();
@@ -438,22 +535,24 @@ function marriageFlow() {
 
 function baziStep() {
   const c = S._cand;
+  const isW = S.gender === '女';
+  const word = isW ? '嫁妆' : '聘礼';
   const roll = Math.random();
   const grade = roll < 0.35 ? '上婚' : roll < 0.75 ? '中婚' : '下婚';
   S._bazi = grade;
   S._extra = 0;
   const text = grade === '上婚'
-    ? '合了八字，天作之合。女家大喜，说这是祖上积德。'
+    ? '合了八字，天作之合。两家大喜，都说这是祖上积德。'
     : grade === '中婚'
-      ? '八字中平，不冲不克。女家说按例走就是。'
-      : '八字相冲。女家说这婚不敢结，除非多备聘礼压一压。';
+      ? '八字中平，不冲不克。两家说按例走就是。'
+      : `八字相冲。${isW ? '男家' : '女家'}说这婚不敢结，除非多备 ${word}压一压。`;
   const opts = [];
   if (grade === '下婚') {
-    opts.push({ label: `多备 10 贯压惊（共 ${c.price + 10} 贯）`, disabled: S.money < c.price + 10, run: () => { S._extra = 10; log('你多备了十贯，女家才点头。'); } });
-    opts.push({ label: '不信这套，照旧成亲', run: () => { addStat('名声', -2); S.stats.气运 = clamp(S.stats.气运 - 2); log('你不信这些，照旧下了聘，乡里说你胆大。'); } });
+    opts.push({ label: `多备 10 贯压惊（共 ${c.price + 10} 贯）`, disabled: S.money < c.price + 10, run: () => { S._extra = 10; log(`你多备了十贯，${isW ? '男家' : '女家'}才点头。`); } });
+    opts.push({ label: '不信这套，照旧成亲', run: () => { addStat('名声', -2); S.stats.气运 = clamp(S.stats.气运 - 2); log('你不信这些，照旧办了，乡里说你胆大。'); } });
     opts.push({ label: '这门亲事算了', run: () => { S._cand = null; } });
   } else {
-    opts.push({ label: '择日纳征', run: () => { log('你挑了个黄道吉日，送去了聘礼。'); } });
+    opts.push({ label: isW ? '择日过礼' : '择日纳征', run: () => { log(`你挑了个黄道吉日，送去了${word}。`); } });
   }
   askStep('合八字', text, opts, () => {
     if (!S._cand) return marriageFlow();
@@ -463,16 +562,18 @@ function baziStep() {
 
 function weddingStep() {
   const c = S._cand;
+  const isW = S.gender === '女';
+  const word = isW ? '嫁妆' : '聘礼';
   const total = c.price + (S._extra || 0);
   const opts = [
-    { label: `按礼成亲（聘礼 ${total} + 酒席 5 贯）`, disabled: S.money < total + 5, run: () => { money(-(total + 5)); addStat('名声', 6); } },
-    { label: `从简（聘礼 ${total}，不摆酒）`, disabled: S.money < total, run: () => { money(-total); addStat('名声', 1); } }
+    { label: `按礼办事（${word} ${total} + 酒席 5 贯）`, disabled: S.money < total + 5, run: () => { money(-(total + 5)); addStat('名声', 6); } },
+    { label: `从简（${word} ${total}，不摆酒）`, disabled: S.money < total, run: () => { money(-total); addStat('名声', 1); } }
   ];
-  askStep('成亲', `择定了日子。聘礼 ${total} 贯，酒席另算。`, opts, () => {
-    S.spouse = { name: c.name, quality: Math.round((c.look + c.virtue) / 2), age: c.age };
-    log(`你迎娶了${c.family}的${c.name}，红烛高照，宾客盈门。`, 'up');
+  askStep('成亲', `择定了日子。${word} ${total} 贯，酒席另算。`, opts, () => {
+    S.spouse = { name: c.name, surname: c.surname, quality: Math.round((c.look + c.virtue) / 2), age: c.age };
+    log(isW ? `你出阁到${c.family}，红烛高照，母亲在门口哭了一场。` : `你迎娶了${c.family}的${c.name}，红烛高照，宾客盈门。`, 'up');
     S._cand = null;
-    scene('成亲', '一拜天地，二拜高堂，夫妻对拜。');
+    scene('成亲', isW ? '盖上盖头，上了花轿。锣鼓一路响到夫家门口。' : '一拜天地，二拜高堂，夫妻对拜。');
     afterAction();
   });
 }
@@ -493,7 +594,7 @@ function birthOutcome() {
   const bad = Math.random() < risk;
   const witBase = Math.round((S.stats.才智 + (S.spouse ? S.spouse.quality : 50)) / 2 + rnd(-8, 8));
   const c = {
-    name: S.name.charAt(0) + (Math.random() < 0.5 ? pick(['砚', '舟', '珩', '清']) : pick(GIVEN_F)),
+    name: (S.gender === '女' ? ((S.spouse && S.spouse.surname) || '夫') : S.name.charAt(0)) + (Math.random() < 0.5 ? pick(['砚', '舟', '珩', '清']) : pick(GIVEN_F)),
     age: 0, wit: clamp(witBase, 10, 95)
   };
   if (bad) { c.wit = clamp(c.wit - 5, 5, 95); S.health = clamp(S.health - 6, 1, 100); log('生产不顺，母子都受了罪，好歹撑了过来。', 'down'); }
@@ -513,6 +614,7 @@ function afterAction() {
   S.health = clamp(S.health);
   checkMastery();
   if (S.health <= 0) return die('积劳成疾，油尽灯枯');
+  if (S.ap > 0) { render(); return; }
   const ev = rollEvent();
   if (ev) { showEvent(ev); return; }
   nextYear();
@@ -571,9 +673,22 @@ function nextYear() {
   S.age += 1;
   S.parents.age += 1;
 
+  if (!S.ap || S.ap > 12) S.ap = 12;
+  S.ap = 12;
+
   // 田租
   const income = Math.round(S.land * 1.8);
   if (income) money(income);
+
+  // 行当月例：有恒业者，一年到头总有进项
+  if (S.trade !== 'none') {
+    const ti = tradeIncome(S);
+    if (ti > 0) {
+      const inc = Math.max(1, Math.round(ti * (0.85 + Math.random() * 0.3)));
+      money(inc);
+      log(`行当月例：本年进项 ${inc} 贯（${tradeTitle(S)}）。`, 'up');
+    }
+  }
 
   // 铺面经营：各行当行情不同，也可能出事故
   let shopIncome = 0;
@@ -755,6 +870,32 @@ function nextYear() {
   // 新一年的开场（按年纪换说法，别让九岁的小孩在镜子里“又老了一岁”）
   scene(`${S.age} 岁`, openLine() + '\n' + estateLine());
   render();
+
+  // 职业事务：行当里总会出点事
+  if (S.trade !== 'none' && !S.over && Math.random() < 0.55) {
+    const ev = pick(TRADE_EVENTS[S.trade] || TRADE_EVENTS._any);
+    if (ev) tradeEvent(ev);
+  }
+}
+
+/* 职业事务：三年一小变，选得不一样，进度不一样 */
+function tradeEvent(ev) {
+  const d = tradeDef(S.trade) || { name: '本行', skill: '农艺' };
+  const text = String(ev.text).replace('{trade}', d.name || '本行');
+  const opts = ev.opts.map(o => ({
+    label: o.label,
+    disabled: o.need ? S.money < o.need : false,
+    run: () => {
+      const e = o.eff || {};
+      if (e.money) money(e.money);
+      if (e.skill) grow(S, d.skill, e.skill);
+      if (e.fame) addStat('名声', e.fame);
+      if (e.health) S.health = clamp(S.health + e.health);
+      if (e.wit) addStat('才智', e.wit);
+      log(o.say, (e.money || 0) < 0 || (e.fame || 0) < 0 ? 'down' : 'up');
+    }
+  }));
+  askStep('行中事 · ' + ev.t, text, opts, () => { render(); });
 }
 
 function openLine() {
