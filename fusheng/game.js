@@ -601,13 +601,14 @@ function nextYear() {
     S.market[g.id] = Math.max(0.55, Math.min(2.2, Number(m.toFixed(3))));
   });
 
-  // 家口开销
+  // 家口开销（未成年的孩子由父母养，不单算这一份）
   const mouths = 1 + (S.spouse ? 1 : 0) + S.children.length + (S.parents.alive ? 2 : 0);
-  money(-Math.round(mouths * 0.6 + S.fame * 0.03 + (S.rank >= 4 ? 1 : 0)));
+  const dependent = S.age < 16 && !S.spouse;
+  if (!dependent) money(-Math.round(mouths * 0.6 + S.fame * 0.03 + (S.rank >= 4 ? 1 : 0)));
 
   // 自家日用：口粮、布、盐，先吃仓里的
   if (!S.goods) S.goods = {};
-  if (S.land < mouths) {
+  if (!dependent && S.land < mouths) {
     let needRice = Math.ceil(mouths * 1.2);
     const useRice = Math.min(needRice, S.goods.mi || 0);
     S.goods.mi = (S.goods.mi || 0) - useRice;
@@ -621,7 +622,7 @@ function nextYear() {
   }
 
   // 布：两口人一匹，先取仓里的
-  let needCloth = Math.ceil(mouths / 2);
+  let needCloth = dependent ? 0 : Math.ceil(mouths / 2);
   const useCloth = Math.min(needCloth, S.goods.bu || 0);
   S.goods.bu = (S.goods.bu || 0) - useCloth;
   needCloth -= useCloth;
@@ -632,7 +633,7 @@ function nextYear() {
   }
 
   // 盐：日用之物
-  const needSalt = mouths >= 3 ? 0.4 : 0.2;
+  const needSalt = dependent ? 0 : (mouths >= 3 ? 0.4 : 0.2);
   if ((S.goods.yan || 0) >= needSalt) S.goods.yan = Number(((S.goods.yan || 0) - needSalt).toFixed(2));
   else if (S.money >= 2) money(-2);
   else addStat('体魄', -1);
