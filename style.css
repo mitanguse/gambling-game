@@ -225,3 +225,8 @@ h1{font-size:52px;letter-spacing:.35em;margin:0 0 6px;font-weight:600}
   color:var(--line);letter-spacing:0;
 }
 .act:disabled .apc{color:var(--line)}
+
+/* 歇冬按钮 */
+.end-row{display:flex;justify-content:center;margin-top:12px}
+.ghost-btn.small{font-size:13px;padding:6px 20px;letter-spacing:.12em}
+.ghost-btn.urgent{border-color:var(--red);color:var(--red)}

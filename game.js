@@ -98,6 +98,7 @@ function newLife(famId, heir) {
     parents: { alive: true, age: 30, favor: 55 },
     gender: Math.random() < 0.5 ? '男' : '女',
     ap: 12, apMax: 12,
+    careerPicked: false,
     log: [],
     over: false
   };
@@ -110,6 +111,7 @@ function newLife(famId, heir) {
     S.fame = heir.fame; S.rank = heir.rank; S.flags = heir.flags.slice();
     S.office = { granted: heir.granted, power: heir.power };
     S.trade = heir.trade || 'none';
+    S.careerPicked = S.trade !== 'none';
     if (heir.household) S.household = heir.household;
     if (heir.origin) { S.origin = heir.origin; }
     S.skill = Object.assign({ 医术: 0, 文名: 0, 吏干: 0 }, heir.skill || {});
@@ -358,6 +360,15 @@ function renderActions() {
   });
 
   if (document.getElementById('cat-modal').hidden === false) refreshCategory();
+
+  const endBtn = document.getElementById('btn-end-year');
+  if (endBtn) {
+    const left = Math.max(0, S.ap || 0);
+    const affordable = ACTIONS.some(a => actionState(a) === true);
+    endBtn.hidden = left <= 0;
+    endBtn.textContent = affordable ? `歇冬 · 余 ${left} 分不用了` : `无轻省事可做 · 过完这一年`;
+    endBtn.classList.toggle('urgent', !affordable);
+  }
   document.getElementById('choices').innerHTML = '';
 }
 
@@ -609,6 +620,15 @@ function birthOutcome() {
     scene('添丁', `${c.name}满月那天，亲戚都来看了。`);
     nextYear();
   });
+}
+
+function endYear() {
+  if (S.over) return;
+  if (document.querySelector('#choices .choice')) return;
+  S.ap = 0;
+  const ev = rollEvent();
+  if (ev) { showEvent(ev); return; }
+  nextYear();
 }
 
 function afterAction() {
@@ -872,11 +892,46 @@ function nextYear() {
   scene(`${S.age} 岁`, openLine() + '\n' + estateLine());
   render();
 
+  // 十四岁：定终身之业
+  if (S.age >= 14 && !S.careerPicked && S.trade === 'none') {
+    S.careerPicked = true;
+    return careerPick();
+  }
+
   // 职业事务：行当里总会出点事
   if (S.trade !== 'none' && !S.over && Math.random() < 0.55) {
     const ev = pick(TRADE_EVENTS[S.trade] || TRADE_EVENTS._any);
     if (ev) tradeEvent(ev);
   }
+}
+
+/* 十四岁择业：把选择摆到面前，而不是埋在二级菜单里 */
+function careerPick() {
+  const joins = ACTIONS.filter(a => a.id.startsWith('join_') || a.id === 'learn_med');
+  const genderOk = (a) => {
+    const r = a.req(S);
+    if (typeof r === 'string' && /只传女子|不收女眷|不收女徒|女眷不入|女子不得|女子不做/.test(r)) return false;
+    return true;
+  };
+  const pool = joins.filter(genderOk);
+  const open = pool.filter(a => a.req(S) === true);
+  const closed = pool.filter(a => a.req(S) !== true);
+  const picks = open.slice(0, 5).concat(closed.slice(0, 1));
+  const opts = picks.map(a => {
+    const ok = a.req(S);
+    return {
+      label: ok === true ? `${a.name}｜${a.desc}` : `${a.name}｜${ok}`,
+      disabled: ok !== true,
+      run: () => {
+        const res = a.run(S) || {};
+        (res.lines || []).forEach(l => log(l, res.cls || 'up'));
+      }
+    };
+  });
+  opts.push({ label: '先不择业，往后再说', run: () => { log('十四岁了，你还没定下往后靠什么吃饭。', ''); } });
+  askStep('十四岁 · 择业',
+    '十四岁这年，家里开始问你：往后靠什么吃饭？\n入行要束修，入了行每年有月例，手艺也会一点点长。',
+    opts, () => { render(); });
 }
 
 /* 职业事务：三年一小变，选得不一样，进度不一样 */
