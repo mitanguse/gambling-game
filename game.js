@@ -1020,7 +1020,10 @@ function careerPick14() {
   const keep = tradeDef(S.trade);
   opts.push({
     label: keep ? `守本业（继续做${keep.name}）` : '暂不定业，先做零活',
-    run: () => { S.careerLocked = true; log(keep ? `你还是守着${keep.name}这一行。` : '你没定下行业，靠零活过日子。', ''); }
+    run: () => {
+      if (keep) { S.careerLocked = true; log(`你还是守着${keep.name}这一行。`, ''); }
+      else { S.careerPicked14 = false; log('你没定下行业，家里说明年再说。', ''); }
+    }
   });
   askStep('十四岁 · 定业',
     '十四岁这年，家里把话说开了：往后靠什么吃饭，得定下来了。\n定了一行，别家的门就不必再敲。',
