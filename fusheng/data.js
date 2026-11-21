@@ -553,7 +553,12 @@ function capOf(S, key) {
   let cap = caps[Math.min(S.rank, 4)];
   if (key === '衣' && S.household === '商户') cap = Math.max(0, cap - 1);
   if (S.office.granted) cap = 3;
-  return cap;
+  // 有钱有脸面的人家，日子总能过得比身份高一头（逾制难免，官府不常究）
+  let slack = 0;
+  if (S.money >= 120) slack += 1;
+  if (S.money >= 400) slack += 1;
+  if (S.fame >= 100) slack += 1;
+  return Math.min(3, cap + Math.min(2, slack));
 }
 
 function decorum(S) {

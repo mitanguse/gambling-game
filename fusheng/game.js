@@ -219,7 +219,7 @@ function render() {
 
   const fam = [];
   fam.push(['父亲/母亲', S.parents.alive ? `在世（${S.parents.age}）· 亲心 ${Math.round(S.parents.favor || 0)}` : '已故']);
-  if (S.spouse) fam.push(['配偶', `${S.spouse.name}（${S.spouse.quality}）`]);
+  if (S.spouse) fam.push(['配偶', `${S.spouse.name}（${S.spouse.age || '?'} 岁 · 才德 ${S.spouse.quality}）`]);
   S.children.forEach(c => fam.push([c.name, `${c.age} 岁 · 才学 ${c.wit}`]));
   document.getElementById('family-list').innerHTML = fam.map(([k, v]) => `<div><span>${k}</span><span>${v}</span></div>`).join('');
 
@@ -605,10 +605,13 @@ function birthOutcome() {
   S._birthRisk = undefined;
   const bad = Math.random() < risk;
   const witBase = Math.round((S.stats.才智 + (S.spouse ? S.spouse.quality : 50)) / 2 + rnd(-8, 8));
-  const c = {
-    name: (S.gender === '女' ? ((S.spouse && S.spouse.surname) || '夫') : S.name.charAt(0)) + (Math.random() < 0.5 ? pick(['砚', '舟', '珩', '清']) : pick(GIVEN_F)),
-    age: 0, wit: clamp(witBase, 10, 95)
-  };
+  const surname = (S.gender === '女' ? ((S.spouse && S.spouse.surname) || '夫') : S.name.charAt(0));
+  const pool = ['砚', '舟', '珩', '清', '瑾', '瑄', '恪', '慎', '和', '顺', '宁', '安'].concat(GIVEN_F || []);
+  let cname = surname + pick(pool);
+  let guard = 0;
+  while (S.children.some(x => x.name === cname) && guard++ < 24) cname = surname + pick(pool);
+  if (S.children.some(x => x.name === cname)) cname = cname + ['二', '三', '四', '五'][S.children.length % 4];
+  const c = { name: cname, age: 0, wit: clamp(witBase, 10, 95) };
   if (bad) { c.wit = clamp(c.wit - 5, 5, 95); S.health = clamp(S.health - 6, 1, 100); log('生产不顺，母子都受了罪，好歹撑了过来。', 'down'); }
   S.children.push(c);
   log(`家中添丁，取名${c.name}。`, 'up');
