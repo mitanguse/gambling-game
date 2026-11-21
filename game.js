@@ -146,6 +146,11 @@ function scene(title, body) {
   lastScene = { title, body };
   document.getElementById('scene-text').innerHTML =
     `<p><b>${title}</b></p><p>${body.replace(/\n/g, '</p><p>')}</p>`;
+  // 反应区在行动按钮上方，每次输出后自动滚回去，免得玩家往上划
+  const el = document.getElementById('scene-text');
+  if (el && el.getBoundingClientRect().top < 0) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 }
 
 function render() {
@@ -213,7 +218,18 @@ function render() {
     `<li class="${l.c}"><span class="yr">${l.y}岁</span>${l.t}</li>`).join('');
 
   renderActions();
+  scrollToStage();
   saveGame();
+}
+
+function scrollToStage() {
+  const el = document.querySelector('.stage');
+  if (!el) return;
+  const y = Math.max(0, Math.round(el.getBoundingClientRect().top + window.scrollY) - 8);
+  setTimeout(() => {
+    window.scrollTo({ top: y, behavior: 'auto' });
+    if (Math.abs(window.scrollY - y) > 4) el.scrollIntoView({ block: 'start' });
+  }, 0);
 }
 
 function officeName() {
@@ -257,7 +273,8 @@ function renderActions() {
     box.className = 'actions';
     b.items.forEach(a => {
       const zx = zuXunBlocked(S, a.id);
-      const ok = zx || a.req(S);
+      const ab = ageBlocked(S, a.id);
+      const ok = zx || ab || a.req(S);
       const nm = a.nameOf ? a.nameOf(S) : a.name;
       const ds = a.descOf ? a.descOf(S) : a.desc;
       const btn = document.createElement('button');
@@ -275,7 +292,10 @@ function renderActions() {
 
 function doAction(a) {
   if (S.over || pendingEvent) return;
+  if (document.querySelector('#choices .choice')) return;   // 有分步流程未完成
   if (zuXunBlocked(S, a.id)) return;
+  const ab = ageBlocked(S, a.id);
+  if (ab) return;
   const res = a.run(S) || {};
   (res.lines || []).forEach(l => log(l, res.cls || ''));
   scene(a.name, (res.lines || ['无']).join('\n'));
@@ -291,6 +311,7 @@ function askStep(title, text, options, after) {
   const box = document.getElementById('choices');
   box.innerHTML = '';
   document.getElementById('scene-text').innerHTML = `<p><b>${title}</b></p><p>${text}</p><p class="muted">如何处置？</p>`;
+  scrollToStage();
   options.forEach(o => {
     const b = document.createElement('button');
     b.className = 'choice';
@@ -440,6 +461,8 @@ function afterAction() {
 }
 
 function rollEvent() {
+  // 幼年不遇外事
+  if (S.age < 10) return null;
   // 岁令：先看当年时令之事
   if (Math.random() < 0.6) {
     const m = S.year % 12;
@@ -876,6 +899,27 @@ function rollFamily() {
   scene('投胎', `${fam.name}\n${fam.desc}\n` + (extra.length ? extra.join('；') + '。' : ''));
   log(`你投生在${fam.name}。家资 ${fam.money} 贯，田 ${fam.land} 亩。`, 'up');
   render();
+  startChildhood();
+}
+
+/* ---------- 童年：六岁前只有零碎的几幕 ---------- */
+function startChildhood() {
+  askStep('童年',
+    '六岁前的事你记不清了，只留下几幕：灶膛的火光、父亲手上的茧、母亲在门口喊你回家吃饭。',
+    [
+      { label: '跟着父亲认字（才智 +6）', run: () => { addStat('才智', 6); log('你趴在桌边认了半本《千字文》。', 'up'); } },
+      { label: '跟着下地、跑腿（体魄 +6）', run: () => { addStat('体魄', 6); log('你六岁就能挑半担水。', 'up'); } },
+      { label: '在街面上疯跑（气运 +4，结识玩伴）', run: () => { addStat('气运', 4); S.friends += 1; log('你认得了半条街的孩子。', 'up'); } }
+    ],
+    () => {
+      const gap = 6 - S.age;
+      S.age = 6;
+      S.year += Math.max(0, gap);
+      S.parents.age += Math.max(0, gap);
+      log('六岁那年，你开始记事了。', 'up');
+      scene('六岁', '你开始记事。家里的日子、父亲的手艺、母亲的叹息，都慢慢清楚了。\n往后的事，就要你自己拿主意了。');
+      render();
+    });
 }
 
 function renderTitleExtras() {
