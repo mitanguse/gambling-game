@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>浮生·古代人生</title>
-<link rel="stylesheet" href="style.css?v=20261121">
+<link rel="stylesheet" href="style.css?v=20261122">
 </head>
 <body>
 <div id="app">
@@ -55,8 +55,21 @@
         </div>
         <div id="choices" class="choices"></div>
         <div id="act-wrap">
-          <h3 class="act-title">岁末行事<span class="tip">（一年只做一件大事）</span></h3>
-          <div id="actions" class="act-groups"></div>
+          <h3 class="act-title">行事<span class="tip">（一年只做一件大事，点开一扇门）</span></h3>
+          <div id="action-grid" class="act-grid"></div>
+        </div>
+
+        <div id="cat-modal" class="cat-modal" hidden>
+          <div class="cat-mask" id="cat-mask"></div>
+          <div class="cat-sheet">
+            <div class="cat-head">
+              <button id="cat-back" class="back-btn">← 返回</button>
+              <b id="cat-title"></b>
+              <span id="cat-sub" class="gcount"></span>
+            </div>
+            <div id="cat-actions" class="actions"></div>
+            <p id="cat-foot" class="cat-foot"></p>
+          </div>
         </div>
       </section>
 
@@ -84,7 +97,7 @@
   </section>
 
 </div>
-<script src="data.js?v=20261121"></script>
-<script src="game.js?v=20261121"></script>
+<script src="data.js?v=20261122"></script>
+<script src="game.js?v=20261122"></script>
 </body>
 </html>

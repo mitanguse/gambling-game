@@ -239,59 +239,117 @@ function officeName() {
 }
 
 const ACTION_GROUPS = [
-  { name: '读书仕途', ids: ['study', 'exam', 'office', 'publish', 'monitor'] },
-  { name: '营生', ids: ['farm', 'work', 'trade', 'craft', 'learn_med', 'practice_med', 'teach_school', 'clerk', 'army', 'quit_trade', 'guild'], prefix: ['join_', 'work_', 'trade_'] },
-  { name: '家事', ids: ['marry', 'teach', 'piety', 'heal', 'bridge'] },
-  { name: '家业', ids: ['land'], prefix: ['open_'] },
-  { name: '用度', ids: ['living_衣', 'living_食', 'living_住', 'living_行', 'garden', 'furniture'] },
-  { name: '交际', ids: ['social', 'travel'] },
-  { name: '消遣', ids: ['pawn_sell'], prefix: ['fun_'] }
+  { name: '读书仕途', icon: '读', blurb: '苦读、赴考、为官、刻书', ids: ['study', 'exam', 'office', 'publish', 'monitor', 'yinguan'] },
+  { name: '营生', icon: '营', blurb: '农工商医与各门师承', ids: ['farm', 'work', 'trade', 'craft', 'learn_med', 'practice_med', 'teach_school', 'clerk', 'army', 'quit_trade', 'guild'], prefix: ['join_', 'work_'] },
+  { name: '家事', icon: '家', blurb: '说亲、教子、请医', ids: ['marry', 'teach', 'heal'] },
+  { name: '人际', icon: '人', blurb: '侍奉父母、交游宴客', ids: ['piety', 'social', 'fun_jiu', 'travel'] },
+  { name: '家业', icon: '业', blurb: '置田、开店、造园', ids: ['land', 'garden', 'furniture', 'bridge'], prefix: ['open_'] },
+  { name: '商店', icon: '市', blurb: '买卖、药铺、当铺、医馆', ids: ['clinic', 'pawn_sell', 'fun_yao'], prefix: ['trade_'] },
+  { name: '用度', icon: '用', blurb: '衣、食、住、行', ids: ['living_衣', 'living_食', 'living_住', 'living_行'] },
+  { name: '消遣', icon: '乐', blurb: '听书、花楼、书坊', ids: ['fun_cha', 'fun_lou', 'fun_shu', 'fun_xiang'] }
 ];
 
-function renderActions() {
-  const wrap = document.getElementById('actions');
-  const openState = {};
-  wrap.querySelectorAll('details').forEach(d => { openState[d.dataset.cat] = d.open; });
-  wrap.innerHTML = '';
+function groupOf(a) {
+  return ACTION_GROUPS.find(g => g.ids.includes(a.id) || (g.prefix || []).some(p => a.id.startsWith(p)));
+}
 
-  const buckets = ACTION_GROUPS.map(g => ({ name: g.name, items: [] }));
-  const other = { name: '其他', items: [] };
+function actionState(a) {
+  return zuXunBlocked(S, a.id) || ageBlocked(S, a.id) || a.req(S);
+}
+
+function actionButton(a) {
+  const ok = actionState(a);
+  const nm = a.nameOf ? a.nameOf(S) : a.name;
+  const ds = a.descOf ? a.descOf(S) : a.desc;
+  const btn = document.createElement('button');
+  btn.className = 'act';
+  btn.innerHTML = `${nm}<small>${ok === true ? ds : ok}</small>`;
+  btn.disabled = ok !== true;
+  btn.onclick = () => doAction(a);
+  return btn;
+}
+
+/* ---------- 主界面：只有一张张门（行动卡） ---------- */
+function renderActions() {
+  const grid = document.getElementById('action-grid');
+  if (!grid) return;
+  const buckets = ACTION_GROUPS.map(g => ({ meta: g, items: [] }));
+  const other = { meta: { name: '其他', icon: '杂', blurb: '杂项' }, items: [] };
   ACTIONS.forEach(a => {
-    const g = ACTION_GROUPS.find(g => g.ids.includes(a.id) || (g.prefix || []).some(p => a.id.startsWith(p)));
-    (g ? buckets.find(b => b.name === g.name) : other).items.push(a);
+    const g = groupOf(a);
+    const b = g ? buckets.find(b => b.meta.name === g.name) : other;
+    if (b) b.items.push(a);
   });
 
+  grid.innerHTML = '';
   buckets.concat([other]).forEach(b => {
     if (!b.items.length) return;
-    const d = document.createElement('details');
-    d.className = 'act-group';
-    d.dataset.cat = b.name;
-    d.open = (b.name in openState) ? openState[b.name] : true;
-    const avail = b.items.filter(a => a.req(S) === true).length;
-    d.innerHTML = `<summary>${b.name}<span class="gcount">${avail}/${b.items.length}</span></summary>`;
-    const box = document.createElement('div');
-    box.className = 'actions';
-    b.items.forEach(a => {
-      const zx = zuXunBlocked(S, a.id);
-      const ab = ageBlocked(S, a.id);
-      const ok = zx || ab || a.req(S);
-      const nm = a.nameOf ? a.nameOf(S) : a.name;
-      const ds = a.descOf ? a.descOf(S) : a.desc;
-      const btn = document.createElement('button');
-      btn.className = 'act';
-      btn.innerHTML = `${nm}<small>${ok === true ? ds : ok}</small>`;
-      btn.disabled = ok !== true;
-      btn.onclick = () => doAction(a);
-      box.appendChild(btn);
-    });
-    d.appendChild(box);
-    wrap.appendChild(d);
+    const avail = b.items.filter(a => actionState(a) === true).length;
+    const card = document.createElement('button');
+    card.className = 'act-card' + (avail ? '' : ' none');
+    card.innerHTML = `<span class="seal">${b.meta.icon}</span><span class="nm">${b.meta.name}</span>` +
+      `<span class="bl">${b.meta.blurb}</span><span class="n">${avail}/${b.items.length} 可做</span>`;
+    card.onclick = () => openCategory(b.meta.name);
+    grid.appendChild(card);
   });
+
+  if (document.getElementById('cat-modal').hidden === false) refreshCategory();
   document.getElementById('choices').innerHTML = '';
 }
 
+/* ---------- 二级界面 ---------- */
+let curCat = null;
+
+function openCategory(name) {
+  curCat = name;
+  const modal = document.getElementById('cat-modal');
+  document.getElementById('cat-title').textContent = name;
+  fillCategory();
+  modal.hidden = false;
+  document.body.style.overflow = 'hidden';
+  const sheet = modal.querySelector('.cat-sheet');
+  if (sheet) sheet.scrollTop = 0;
+}
+
+function closeCategory() {
+  const modal = document.getElementById('cat-modal');
+  if (!modal || modal.hidden) return;
+  modal.hidden = true;
+  document.body.style.overflow = '';
+  curCat = null;
+}
+
+function fillCategory() {
+  if (!curCat) return;
+  const box = document.getElementById('cat-actions');
+  box.innerHTML = '';
+  const items = ACTIONS.filter(a => (groupOf(a) || {}).name === curCat);
+  const avail = items.filter(a => actionState(a) === true).length;
+  document.getElementById('cat-sub').textContent = `${avail}/${items.length} 可做`;
+  if (!items.length) {
+    box.innerHTML = '<p class="muted">此处暂无可用之事。</p>';
+    return;
+  }
+  items.forEach(a => box.appendChild(actionButton(a)));
+  const miss = items.length - avail;
+  document.getElementById('cat-foot').textContent = miss
+    ? `${miss} 件暂时做不得，缘由写在按钮下方。`
+    : '皆可为之。';
+}
+
+function refreshCategory() { if (curCat) fillCategory(); }
+
+/* 返回 / Esc / 点遮罩关闭 */
+document.addEventListener('click', e => {
+  if (e.target && (e.target.id === 'cat-back' || e.target.id === 'cat-mask')) closeCategory();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeCategory();
+});
+
 function doAction(a) {
   if (S.over || pendingEvent) return;
+  closeCategory();
   if (document.querySelector('#choices .choice')) return;   // 有分步流程未完成
   if (zuXunBlocked(S, a.id)) return;
   const ab = ageBlocked(S, a.id);
