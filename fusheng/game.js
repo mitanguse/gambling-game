@@ -35,6 +35,15 @@ function loadGame() {
   S.shop = (S.shops || []).length;
   if (!S.goods) S.goods = {};
   if (!S.market) S.market = { mi: 1, bu: 1, cha: 1, yao: 1, ci: 1, tie: 1, si: 1, yan: 1 };
+  // 旧存档里重名的孩子，补一个区别字
+  const seen = {};
+  (S.children || []).forEach(c => {
+    if (!seen[c.name]) { seen[c.name] = 1; return; }
+    seen[c.name] += 1;
+    let n = 2, base = c.name;
+    while ((S.children || []).some(x => x.name === base + n)) n += 1;
+    c.name = base + n;
+  });
   pendingEvent = null;
   showScreen('play');
   scene(lastScene.title || `${S.age} 岁`, lastScene.body || '');
@@ -99,6 +108,8 @@ function newLife(famId, heir) {
     gender: Math.random() < 0.5 ? '男' : '女',
     ap: 12, apMax: 12,
     careerPicked: false,
+    careerPicked6: false, careerPicked14: false, careerLocked: false,
+    path: '', careerYears: 0,
     log: [],
     over: false
   };
@@ -294,7 +305,9 @@ function tradeIncome(S) {
   const tbl = TRADE_INCOME[S.trade];
   if (!tbl) return 0;
   const lv = Math.max(0, tradeLevel(S));
-  return tbl[Math.min(tbl.length - 1, lv)] || 0;
+  const base = tbl[Math.min(tbl.length - 1, lv)] || 0;
+  const senior = 1 + Math.min(0.5, (S.careerYears || 0) * 0.04);   // 做久了手熟，年年多挣一点
+  return Math.round(base * senior);
 }
 
 function renderTrade() {
@@ -312,8 +325,9 @@ function renderTrade() {
   box.innerHTML =
     `<div class="trade-row"><span>${d.name}</span><span class="trade-lv">${d.ranks[lv]}</span></div>` +
     `<div class="bar y"><i style="width:${Math.min(100, v)}%"></i></div>` +
-    `<div class="trade-meta">${d.skill} ${v}${d.skill === '军功' ? '' : '/100'} · 年入约 ${tradeIncome(S)} 贯</div>` +
-    `<div class="trade-meta">${nextText}</div>`;
+    `<div class="trade-meta">${d.skill} ${v}${d.skill === '军功' ? '' : '/100'} · 年入约 ${tradeIncome(S)} 贯 · 资历 ${S.careerYears || 0} 年</div>` +
+    `<div class="trade-meta">${nextText}</div>` +
+    `<div class="trade-meta">${['尚无门路', '可收徒授艺', '可自立门户', '可挂字号', '一方宗师'][lv] || ''}</div>`;
 }
 
 function actionState(a) {
@@ -342,6 +356,7 @@ function renderActions() {
   const buckets = ACTION_GROUPS.map(g => ({ meta: g, items: [] }));
   const other = { meta: { name: '其他', icon: '杂', blurb: '杂项' }, items: [] };
   ACTIONS.forEach(a => {
+    if (S.careerLocked && isEntryAction(a) && entryTradeOf(a) !== S.trade) return;   // 定了业，别家的门不再开
     const g = groupOf(a);
     const b = g ? buckets.find(b => b.meta.name === g.name) : other;
     if (b) b.items.push(a);
@@ -398,7 +413,8 @@ function fillCategory() {
   if (!curCat) return;
   const box = document.getElementById('cat-actions');
   box.innerHTML = '';
-  const items = ACTIONS.filter(a => (groupOf(a) || {}).name === curCat);
+  const items = ACTIONS.filter(a => (groupOf(a) || {}).name === curCat &&
+    !(S.careerLocked && isEntryAction(a) && entryTradeOf(a) !== S.trade));
   const avail = items.filter(a => actionState(a) === true).length;
   document.getElementById('cat-sub').textContent = `${avail}/${items.length} 可做`;
   if (!items.length) {
@@ -706,6 +722,7 @@ function nextYear() {
 
   // 行当月例：有恒业者，一年到头总有进项
   if (S.trade !== 'none') {
+    S.careerYears = (S.careerYears || 0) + 1;
     const ti = tradeIncome(S);
     if (ti > 0) {
       const inc = Math.max(1, Math.round(ti * (0.85 + Math.random() * 0.3)));
@@ -895,10 +912,16 @@ function nextYear() {
   scene(`${S.age} 岁`, openLine() + '\n' + estateLine());
   render();
 
-  // 十四岁：定终身之业
-  if (S.age >= 14 && !S.careerPicked && S.trade === 'none') {
-    S.careerPicked = true;
-    return careerPick();
+  // 六岁：开蒙（读档进来的老角色跳过）
+  if (S.age >= 6 && S.age < 14 && !S.careerPicked6) {
+    S.careerPicked6 = true;
+    return careerPick6();
+  }
+
+  // 十四岁：定业，此后别家的门不再敲
+  if (S.age >= 14 && !S.careerPicked14) {
+    S.careerPicked14 = true;
+    return careerPick14();
   }
 
   // 职业事务：行当里总会出点事
@@ -909,18 +932,79 @@ function nextYear() {
 }
 
 /* 十四岁择业：把选择摆到面前，而不是埋在二级菜单里 */
-function careerPick() {
-  const joins = ACTIONS.filter(a => a.id.startsWith('join_') || a.id === 'learn_med');
+/* 六岁开蒙：先定一个大方向（读书 / 家传手艺 / 下地 / 女红 / 帮佣） */
+function careerPick6() {
+  const famTrade = { jiang: 'jiang', shang: 'shang', geng: 'nong', chi: 'nong', nong: 'nong', jun: 'nong' }[S.origin] || '';
+  const opts = [
+    {
+      label: '入蒙学读书（每年灯油 1 贯，才智长得快）',
+      disabled: S.money < 2,
+      run: () => {
+        S.path = 'study';
+        S.flags.push('开蒙');
+        addStat('才智', 4);
+        log('你进了村塾，先生先教你写自己的名字。', 'up');
+      }
+    },
+    {
+      label: famTrade === 'jiang' ? '跟着父亲学木匠（家传手艺）'
+        : famTrade === 'shang' ? '跟着家里学算账做生意（家传行当）'
+          : '跟着家里下地做活（家传本业）',
+      run: () => {
+        S.path = 'family';
+        if (famTrade) { S.trade = famTrade; grow(S, (tradeDef(famTrade) || {}).skill || '农艺', 6); }
+        log('六岁起你就跟着家里做活，手上的力气一点点长出来。', 'up');
+      }
+    },
+    {
+      label: '替人放牛、跑腿（每年挣几个铜板）',
+      run: () => {
+        S.path = 'labor';
+        money(1); addStat('体魄', 2);
+        log('你开始替邻里放牛、挑水，挣的钱交给母亲。', 'up');
+      }
+    }
+  ];
+  if (S.gender === '女') {
+    opts.push({
+      label: '跟着母亲学女红（绣活、针线）',
+      run: () => {
+        S.path = 'craft';
+        S.trade = 'xiu';
+        S.skill.绣艺 = Math.max(S.skill.绣艺 || 0, 6);
+        log('你坐在窗下学着穿针，一天下来扎了七个眼。', 'up');
+      }
+    });
+  }
+  opts.push({ label: '先不入门，跟着家里混日子', run: () => { S.path = 'none'; log('你没定下学什么，日子还是照过。', ''); } });
+  askStep('六岁 · 开蒙',
+    '六岁这年，家里问你想学什么。\n这时候定的是大方向：读书、家传手艺，还是先做活挣钱。',
+    opts, () => { render(); });
+}
+
+/* 入口动作 → 行当 */
+const ENTRY_TRADE = { farm: 'nong', craft: 'jiang', trade: 'shang', learn_med: 'yi', clerk: 'li', army: 'jun' };
+function isEntryAction(a) {
+  if (ENTRY_TRADE[a.id]) return true;
+  if (a.id.startsWith('join_')) return true;
+  return false;
+}
+function entryTradeOf(a) {
+  return ENTRY_TRADE[a.id] || a.id.replace('join_', '');
+}
+
+/* 十四岁定业：给全部行当挑一次，定了就不再改 */
+function careerPick14() {
+  const joins = ACTIONS.filter(a => isEntryAction(a));
   const genderOk = (a) => {
     const r = a.req(S);
     if (typeof r === 'string' && /只传女子|不收女眷|不收女徒|女眷不入|女子不得|女子不做/.test(r)) return false;
     return true;
   };
   const pool = joins.filter(genderOk);
-  const open = pool.filter(a => a.req(S) === true);
-  const closed = pool.filter(a => a.req(S) !== true);
-  const basics = ACTIONS.filter(a => ['farm', 'trade', 'craft', 'chores'].indexOf(a.id) >= 0 && a.req(S) === true).slice(0, 2);
-  const picks = basics.concat(open.filter(a => basics.indexOf(a) < 0).slice(0, 4)).concat(closed.slice(0, 1));
+  const open = pool.filter(a => a.req(S) === true && entryTradeOf(a) !== S.trade);
+  const closed = pool.filter(a => a.req(S) !== true && entryTradeOf(a) !== S.trade);
+  const picks = open.slice(0, 5).concat(closed.slice(0, 1));
   const opts = picks.map(a => {
     const ok = a.req(S);
     return {
@@ -929,12 +1013,17 @@ function careerPick() {
       run: () => {
         const res = a.run(S) || {};
         (res.lines || []).forEach(l => log(l, res.cls || 'up'));
+        S.careerLocked = true;
       }
     };
   });
-  opts.push({ label: '先不择业，往后再说', run: () => { log('十四岁了，你还没定下往后靠什么吃饭。', ''); } });
-  askStep('十四岁 · 择业',
-    '十四岁这年，家里开始问你：往后靠什么吃饭？\n入行要束修，入了行每年有月例，手艺也会一点点长。',
+  const keep = tradeDef(S.trade);
+  opts.push({
+    label: keep ? `守本业（继续做${keep.name}）` : '暂不定业，先做零活',
+    run: () => { S.careerLocked = true; log(keep ? `你还是守着${keep.name}这一行。` : '你没定下行业，靠零活过日子。', ''); }
+  });
+  askStep('十四岁 · 定业',
+    '十四岁这年，家里把话说开了：往后靠什么吃饭，得定下来了。\n定了一行，别家的门就不必再敲。',
     opts, () => { render(); });
 }
 
@@ -1245,6 +1334,7 @@ function startChildhood() {
       log('六岁那年，你开始记事了。', 'up');
       scene('六岁', '你开始记事。家里的日子、父亲的手艺、母亲的叹息，都慢慢清楚了。\n往后的事，就要你自己拿主意了。');
       render();
+      if (!S.careerPicked6) { S.careerPicked6 = true; careerPick6(); }
     });
 }
 
