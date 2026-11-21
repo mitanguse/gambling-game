@@ -806,7 +806,7 @@ function nextYear() {
   money(-(landTax + Math.round(corvee)));
   const taxParts = [];
   if (landTax > 0) taxParts.push(`田赋 ${landTax} 贯`);
-  if (corvee > 0) taxParts.push(`均徳折银 ${Math.round(corvee)} 贯`);
+  if (Math.round(corvee) > 0) taxParts.push(`均徳折银 ${Math.round(corvee)} 贯`);
   if (taxParts.length) log(`纳税应役：${taxParts.join('，')}。`, 'down');
 
   // 廪米与俸禄
