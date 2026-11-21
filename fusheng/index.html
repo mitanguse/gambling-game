@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>浮生·古代人生</title>
-<link rel="stylesheet" href="style.css?v=20261127">
+<link rel="stylesheet" href="style.css?v=20261128">
 </head>
 <body>
 <div id="app">
@@ -33,7 +33,9 @@
         <span id="hud-era">——</span>
       </div>
       <div class="hud-right">
+        <span id="hud-gender" class="pill">身 ——</span>
         <span id="hud-rank" class="pill">白身</span>
+        <span id="hud-ap" class="pill">春 · 精力 12/12</span>
         <span id="hud-money" class="pill">家资 ——</span>
         <span id="hud-health" class="pill">气血 ——</span>
       </div>
@@ -43,6 +45,8 @@
       <aside class="panel stats">
         <h2>禀赋</h2>
         <div id="stat-list"></div>
+        <h2>职业</h2>
+        <div id="trade-box" class="trade-box"></div>
         <h2>家业</h2>
         <div id="estate-list" class="kv"></div>
         <h2>身份</h2>
@@ -61,7 +65,7 @@
         </details>
 
         <div id="act-wrap">
-          <h3 class="act-title">行事<span class="tip">（一年只做一件大事，点开一扇门）</span></h3>
+          <h3 class="act-title">行事<span class="tip">（一年十二分精力，四季各三分）</span></h3>
           <div id="action-grid" class="act-grid"></div>
         </div>
 
@@ -101,7 +105,7 @@
   </section>
 
 </div>
-<script src="data.js?v=20261127"></script>
-<script src="game.js?v=20261127"></script>
+<script src="data.js?v=20261128"></script>
+<script src="game.js?v=20261128"></script>
 </body>
 </html>
