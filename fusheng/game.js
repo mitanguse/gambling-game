@@ -498,10 +498,11 @@ function marriageFlow() {
     }
   }));
   opts.push({ label: '都不中意，先不提亲', run: () => { S._cand = null; } });
-  if (!isW && S.money < 20) {
+  const cheapest = Math.min.apply(null, cs.map(c => c.price));
+  if (!isW && S.money < cheapest) {
     opts.push({ label: '聘礼凑不出，只能入赘他家', run: () => { S._cand = cs[0]; S._ruzhui = true; } });
   }
-  if (isW && S.money < 20) {
+  if (isW && S.money < cheapest) {
     opts.push({ label: '嫁妆凑不出，空手过门（名声 -3）', run: () => { S._cand = cs[0]; S._bare = true; } });
   }
   askStep('说媒', isW
