@@ -95,7 +95,7 @@ function newLife(famId, heir) {
     spouse: null,
     children: [],
     friends: 0,
-    parents: { alive: true, age: 30 },
+    parents: { alive: true, age: 30, favor: 55 },
     log: [],
     over: false
   };
@@ -209,7 +209,7 @@ function render() {
     `<div style="border:none;color:#4a4034;font-size:12px">上限：${['衣', '食', '住', '行'].map(k => LIVING[k].levels[capOf(S, k)]).join('／')}</div>`;
 
   const fam = [];
-  fam.push(['父亲/母亲', S.parents.alive ? `在世（${S.parents.age}）` : '已故']);
+  fam.push(['父亲/母亲', S.parents.alive ? `在世（${S.parents.age}）· 亲心 ${Math.round(S.parents.favor || 0)}` : '已故']);
   if (S.spouse) fam.push(['配偶', `${S.spouse.name}（${S.spouse.quality}）`]);
   S.children.forEach(c => fam.push([c.name, `${c.age} 岁 · 才学 ${c.wit}`]));
   document.getElementById('family-list').innerHTML = fam.map(([k, v]) => `<div><span>${k}</span><span>${v}</span></div>`).join('');
@@ -242,7 +242,7 @@ const ACTION_GROUPS = [
   { name: '读书仕途', icon: '读', blurb: '苦读、赴考、为官、刻书', ids: ['study', 'exam', 'office', 'publish', 'monitor', 'yinguan'] },
   { name: '营生', icon: '营', blurb: '农工商医与各门师承', ids: ['farm', 'work', 'chores', 'trade', 'craft', 'learn_med', 'practice_med', 'teach_school', 'clerk', 'army', 'quit_trade', 'guild'], prefix: ['join_', 'work_'] },
   { name: '家事', icon: '家', blurb: '说亲、教子、请医', ids: ['marry', 'teach', 'heal'] },
-  { name: '人际', icon: '人', blurb: '侍奉父母、交游宴客', ids: ['piety', 'social', 'fun_jiu', 'travel'] },
+  { name: '人际', icon: '人', blurb: '侍奉父母、交游宴客', ids: ['piety', 'ask_money', 'social', 'fun_jiu', 'travel'] },
   { name: '家业', icon: '业', blurb: '置田、开店、造园', ids: ['land', 'garden', 'furniture', 'bridge'], prefix: ['open_'] },
   { name: '商店', icon: '市', blurb: '买卖、药铺、当铺、医馆', ids: ['clinic', 'pawn_sell', 'fun_yao'], prefix: ['trade_'] },
   { name: '用度', icon: '用', blurb: '衣、食、住、行', ids: ['living_衣', 'living_食', 'living_住', 'living_行'] },
@@ -608,7 +608,7 @@ function nextYear() {
 
   // 自家日用：口粮、布、盐，先吃仓里的
   if (!S.goods) S.goods = {};
-  if (!dependent && S.land < mouths) {
+  if (!dependent && S.land < mouths && S.trade !== 'nong') {   // 自家种地的，口粮从收成里留
     let needRice = Math.ceil(mouths * 1.2);
     const useRice = Math.min(needRice, S.goods.mi || 0);
     S.goods.mi = (S.goods.mi || 0) - useRice;
@@ -617,7 +617,7 @@ function nextYear() {
       const p = priceOf(S, GOODS.find(g => g.id === 'mi'));
       const cost = Math.round(needRice * p);
       if (S.money >= cost) { money(-cost); log(`仓中粮不够，按市价买了 ${needRice} 石。`, 'down'); }
-      else { S.health -= 8; addStat('名声', -2); log('粮不够，钱也没有，一家人饿了半年。', 'down'); }
+      else { S.health -= 8; addStat('名声', -2); log('粮不够，钱也没有，一家人饿了半年。（可去商店买米）', 'down'); }
     }
   }
 
@@ -689,7 +689,10 @@ function nextYear() {
     }
   }
   money(-(landTax + Math.round(corvee)));
-  if (landTax + corvee > 0) log(`纳税应役：田赋 ${landTax} 贯，均徳折银 ${Math.round(corvee)} 贯。`, 'down');
+  const taxParts = [];
+  if (landTax > 0) taxParts.push(`田赋 ${landTax} 贯`);
+  if (corvee > 0) taxParts.push(`均徳折银 ${Math.round(corvee)} 贯`);
+  if (taxParts.length) log(`纳税应役：${taxParts.join('，')}。`, 'down');
 
   // 廪米与俸禄
   if (S.rank === 2) money(1);
@@ -750,20 +753,25 @@ function nextYear() {
   if (S.age >= MAX_YEAR || Math.random() < deathRisk) return die(S.age >= 60 ? '寿终正寝' : '一病不起');
 
   // 新一年的开场（按年纪换说法，别让九岁的小孩在镜子里“又老了一岁”）
-  scene(`${S.age} 岁`, openLine() + `\n家资 ${S.money} 贯，田 ${S.land} 亩。`);
+  scene(`${S.age} 岁`, openLine() + '\n' + estateLine());
   render();
 }
 
 function openLine() {
   const a = S.age;
   const weak = S.health < 50;
+  const poor = S.land === 0 && S.money < 3;
   const y = `天启 ${S.year + 1} 年，${seasonText()}。`;
   if (a <= 12) {
     return pick([
-      y + '你又长高了一点，衣裳短了一截。',
-      y + (weak ? '你近来总是咳，母亲半夜起来给你添被。' : '你跑得比去年快了。'),
+      y + '你又长高了一点，去年的衣裳短了一截。',
+      y + (weak ? '你近来总是咳，母亲半夜起来给你添被。' : '你跑得比去年快，能追上巷口的野狗。'),
+      y + '你跟着父亲下地，学会了看云识天气。',
+      y + '私塾墙外你站了半晌，听里头念“子曰”。',
+      y + (poor ? '锅里照旧是稀的，你把碗底的米粒拨给妹妹。' : '母亲给你添了一件新夹袄。'),
       '一年过去，你已经能帮家里做些轻活。',
-      '巷子里的路你跑熟了，谁家灶上烧什么，你都知道。'
+      '巷子里的路你跑熟了，谁家灶上烧什么，你都知道。',
+      y + '你在河边看人撑船，一看就是一下午。'
     ]);
   }
   if (a <= 19) {
@@ -771,7 +779,10 @@ function openLine() {
       y,
       `又一年。${a} 岁的你，站在院中看了一会儿天。`,
       '镜子里的脸褪了稚气，眉眼渐渐定了。',
-      y + (weak ? '你近来总觉得乏力，饭量也小了。' : '身板渐渐长开，穿的衣裳要重新做。')
+      y + (weak ? '你近来总觉得乏力，饭量也小了。' : '身板渐渐长开，穿的衣裳要重新做。'),
+      y + '有人上门说起亲事，母亲笑着把人送走了。',
+      '你开始觉得，日子不只是过，还得想。',
+      y + (poor ? '你算了算家里的账，越算越睡不着。' : '家里的事，父亲已经开始问你的意思。')
     ]);
   }
   if (a <= 39) {
@@ -779,7 +790,10 @@ function openLine() {
       y,
       `又一年过去了。${a} 岁的你，站在院中看了一会儿天。`,
       '春耕、夏汛、秋收、冬藏，一年又这么过去了。',
-      y + (weak ? '这一年身子不大爽利，做事总提不起劲。' : '肩上的担子比去年重了些。')
+      y + (weak ? '这一年身子不大爽利，做事总提不起劲。' : '肩上的担子比去年重了些。'),
+      y + '鬓角添了几根白的，你对着水缸看了半晌。',
+      '孩子大了些，开蒙的束脩又涨了。',
+      y + (poor ? '年底一算，进项刚够填上开销。' : '仓里的粮还够，你心里踏实了半分。')
     ]);
   }
   if (a <= 59) {
@@ -787,15 +801,28 @@ function openLine() {
       y,
       `又一年。${a} 岁的你，眼角添了一道纹。`,
       '腰背开始发沉，蹲下去再站起来要缓一缓。',
-      y + (weak ? '夜里睡不踏实，天亮得比从前早。' : '身子还算过得去，只是不如从前经折腾。')
+      y + (weak ? '夜里睡不踏实，天亮得比从前早。' : '身子还算过得去，只是不如从前经折腾。'),
+      y + '族里的小辈来问事，你说了半个时辰。',
+      '你翻出旧年的账本，纸都发黄了。',
+      y + '街上后生叫你一声“老叔”，你应了半天才回过神。'
     ]);
   }
   return pick([
     `镜中的人又老了一岁。${weak ? '近来总觉得气短。' : '身体还算康健。'}`,
     y + '你走得慢了些，拄杖的时候多了。',
     `又一年。${a} 岁的你，坐在门槛上晒太阳。`,
-    y + (weak ? '这场风寒拖了半个月，人瘦了一圈。' : '饭还能吃两碗，只是牙口不如从前。')
+    y + (weak ? '这场风寒拖了半个月，人瘦了一圈。' : '饭还能吃两碗，只是牙口不如从前。'),
+    y + '你把儿孙的名字一个个念过去，怕忘了。',
+    '你常在夜里醒来，想起年轻时某个赶集的日子。'
   ]);
+}
+
+function estateLine() {
+  const m = S.money, l = S.land;
+  if (l === 0) return `家资 ${m} 贯，无寸土，靠租种与人情过活。`;
+  if (S.rank >= 4) return `家资 ${m} 贯，田 ${l} 亩，名下田产已获优免。`;
+  if (l >= 20) return `家资 ${m} 贯，田 ${l} 亩，算是一方殷实人家。`;
+  return `家资 ${m} 贯，田 ${l} 亩。`;
 }
 
 function seasonText() {
