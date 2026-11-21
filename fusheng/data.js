@@ -117,8 +117,14 @@ const ACTIONS = [
   {
     id: 'farm', name: '务农', cost: 0,
     desc: '守着自家田地，稳当但不富',
-    req: (S) => (S.land > 0 ? true : '家中无田'),
+    req: (S) => ((S.land > 0 || S.origin === 'chi') ? true : '家中无田'),
     run: (S) => {
+      if (S.land === 0) {   // 佃户：租人家的田，交完租只剩口粮
+        const r = 2 + rnd(0, 2);
+        S.trade = 'nong'; grow(S, '农艺', rnd(1, 3));
+        S.money += r; addStat('体魄', -2);
+        return { lines: [`你租了东家的田，一年两熟，交完租剩 ${r} 贯。`] };
+      }
       let yield_ = Math.round(S.land * (1.2 + Math.random()) + 1);
       if (S.goods && S.goods.tie > 0) yield_ += 2;   // 仓里存着铁器，农具不缺
       S.trade = 'nong';
@@ -135,6 +141,17 @@ const ACTIONS = [
       const gain = S.flags.includes('手艺') ? 6 + rnd(0, 2) : 4 + rnd(0, 2);
       S.money += gain; addStat('体魄', -3);
       return { lines: [`你替人做了一年活计，挣得 ${gain} 贯，腰背酸了一年。`] };
+    }
+  },
+  {
+    id: 'chores', name: '帮工', cost: 0,
+    desc: '替人放牛、拾柴、挑水，挣几个铜板',
+    req: (S) => (S.age >= 6 && S.age <= 14 ? true : (S.age < 6 ? '太小了' : '这年纪不该再做这个')),
+    run: (S) => {
+      const gain = 1 + rnd(0, 2);
+      S.money += gain; addStat('体魄', 1);
+      grow(S, '农艺', 1);
+      return { lines: [`你在邻家帮了一年工，东家管饭，另给 ${gain} 贯。`] };
     }
   },
   {
@@ -1380,7 +1397,7 @@ ACTIONS.push(
 
 /* ================= 年龄门槛：什么事到什么时候才能做 ================= */
 const AGE_MIN = {
-  study: 6, clinic: 6, heal: 6, piety: 6,
+  study: 6, clinic: 6, heal: 6, piety: 6, chores: 6,
   farm: 10, work: 10, bridge: 12, publish: 12, monitor: 12, social: 12, quit_trade: 12,
   craft: 14, exam: 8, guild: 16, land: 16, travel: 16, office: 16, yinguan: 16,
   garden: 16, furniture: 16, pawn_sell: 16, teach: 22, marry: 15
