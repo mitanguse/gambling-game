@@ -916,7 +916,8 @@ function careerPick() {
   const pool = joins.filter(genderOk);
   const open = pool.filter(a => a.req(S) === true);
   const closed = pool.filter(a => a.req(S) !== true);
-  const picks = open.slice(0, 5).concat(closed.slice(0, 1));
+  const basics = ACTIONS.filter(a => ['farm', 'trade', 'craft', 'chores'].indexOf(a.id) >= 0 && a.req(S) === true).slice(0, 2);
+  const picks = basics.concat(open.filter(a => basics.indexOf(a) < 0).slice(0, 4)).concat(closed.slice(0, 1));
   const opts = picks.map(a => {
     const ok = a.req(S);
     return {
