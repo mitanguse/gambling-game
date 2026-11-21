@@ -497,7 +497,7 @@ function decorum(S) {
 const EVENTS = [
   {
     id: 'famine', w: 6,
-    cond: (S) => S.land > 0 && S.age > 8,
+    cond: (S) => S.land > 0 && S.age >= 10,
     text: () => '今岁大旱，河床见底。乡里已有人开始卖儿卖女，官府的赈粮迟迟不到。',
     choices: [
       { label: '开仓济乡邻', req: (S) => S.money >= 5, run: (S) => { S.money -= 5; addStat('德行', 8); addStat('名声', 6); return ['你把存粮分了出去，自己饿了三个月。']; } },
@@ -507,7 +507,7 @@ const EVENTS = [
   },
   {
     id: 'plague', w: 4,
-    cond: (S) => S.age > 5,
+    cond: (S) => S.age >= 8,
     text: () => '疫气入城。街口每日都有新棺，郎中束手，人人闭户。',
     choices: [
       { label: '出钱设药棚', req: (S) => S.money >= 10, run: (S) => { S.money -= 10; addStat('德行', 10); addStat('名声', 8); S.health -= 10; return ['你在城门口设棚施药，救了不少人，自己也病了一场。']; } },
@@ -517,7 +517,7 @@ const EVENTS = [
   },
   {
     id: 'robber', w: 5,
-    cond: (S) => S.money > 10,
+    cond: (S) => S.money > 10 && S.age >= 12,
     text: () => '你夜行归家，道旁窜出三人，一柄柴刀架在你颈上。',
     choices: [
       { label: '破财免灾', run: (S) => { const loss = Math.min(S.money, 10 + rnd(0, 15)); S.money -= loss; return ['你把钱袋扔了过去，捡回一条命，折了 ' + loss + ' 贯。']; } },
@@ -536,7 +536,7 @@ const EVENTS = [
   },
   {
     id: 'lawsuit', w: 4,
-    cond: (S) => S.money > 20,
+    cond: (S) => S.money > 20 && S.age >= 16,
     text: () => '族中堂兄告你侵占祖田，状纸已递到县衙。',
     choices: [
       { label: '花钱打点', req: (S) => S.money >= 15, run: (S) => { S.money -= 15; addStat('德行', -3); addStat('名声', -4); return ['你使了银子，官司赢了一半，名声坏了一点。']; } },
@@ -1377,3 +1377,26 @@ ACTIONS.push(
     }
   }
 );
+
+/* ================= 年龄门槛：什么事到什么时候才能做 ================= */
+const AGE_MIN = {
+  study: 6, clinic: 6, heal: 6, piety: 6,
+  farm: 10, work: 10, bridge: 12, publish: 12, monitor: 12, social: 12, quit_trade: 12,
+  craft: 14, exam: 8, guild: 16, land: 16, travel: 16, office: 16, yinguan: 16,
+  garden: 16, furniture: 16, pawn_sell: 16, teach: 22, marry: 15
+};
+
+function ageBlocked(S, id) {
+  let need = AGE_MIN[id];
+  if (need === undefined) {
+    if (id.startsWith('living_')) need = 12;
+    else if (id.startsWith('open_')) need = 16;
+    else if (id.startsWith('trade_')) need = 16;
+    else if (id.startsWith('fun_')) need = 12;
+    else if (id.startsWith('join_')) need = 14;
+    else if (id.startsWith('work_')) need = 14;
+    else need = 12;
+  }
+  if (S.age < need) return `年方 ${S.age} 岁，还做不得此事`;
+  return null;
+}
