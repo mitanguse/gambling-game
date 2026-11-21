@@ -97,6 +97,9 @@ const OFFICE_RANKS = [
 ];
 
 /* 行动：一年一件。req 返回 false 或不可用原因字符串 */
+/* 向父母讨钱：各家底子不同 */
+const ASK_BASE = { chi: 1, nong: 2, jiang: 3, shang: 6, geng: 3, shu: 5, zong: 4, jun: 2, guan: 8, zongshi: 10 };
+
 const ACTIONS = [
   {
     id: 'study', name: '苦读', cost: 0,
@@ -111,7 +114,11 @@ const ACTIONS = [
       const body = -Math.round(1 + (S.age > 40 ? 2 : 0));
       addStat('才智', wit); addStat('体魄', body);
       S.money -= 1;
-      return { lines: [`你把一年的灯油都熬干了，才学长进 ${wit} 点。`, `体魄 -${-body}，灯油钱花了 1 贯。`] };
+      return { lines: [pick([
+        `你把一年的灯油都熬干了，才学长进 ${wit} 点。`,
+        `窗下读到三更，墨磨干了两锭，才学进 ${wit} 点。`,
+        `你把《四书》又通了一遍，字也写得端正些，才学进 ${wit} 点。`
+      ]), `体魄 -${-body}，灯油钱花了 1 贯。`] };
     }
   },
   {
@@ -123,14 +130,22 @@ const ACTIONS = [
         const r = 2 + rnd(0, 2);
         S.trade = 'nong'; grow(S, '农艺', rnd(1, 3));
         S.money += r; addStat('体魄', -2);
-        return { lines: [`你租了东家的田，一年两熟，交完租剩 ${r} 贯。`] };
+        return { lines: [pick([
+        `你租了东家的田，一年两熟，交完租剩 ${r} 贯。`,
+        `春天下种，秋天还租，落到手里 ${r} 贯。`,
+        `东家来收租那日，把斗刮得很平。你一年落下 ${r} 贯。`
+      ])] };
       }
       let yield_ = Math.round(S.land * (1.2 + Math.random()) + 1);
       if (S.goods && S.goods.tie > 0) yield_ += 2;   // 仓里存着铁器，农具不缺
       S.trade = 'nong';
       grow(S, '农艺', rnd(2, 4));
       S.money += yield_; addStat('体魄', -1);
-      return { lines: [`一年两熟，田里出了 ${yield_} 贯。`] };
+      return { lines: [pick([
+        `一年两熟，田里出了 ${yield_} 贯。`,
+        `稻子压弯了秆，晒场上一片金黄，折银 ${yield_} 贯。`,
+        `今年雨水调匀，收成不坏，田里出了 ${yield_} 贯。`
+      ])] };
     }
   },
   {
@@ -140,7 +155,11 @@ const ACTIONS = [
     run: (S) => {
       const gain = S.flags.includes('手艺') ? 6 + rnd(0, 2) : 4 + rnd(0, 2);
       S.money += gain; addStat('体魄', -3);
-      return { lines: [`你替人做了一年活计，挣得 ${gain} 贯，腰背酸了一年。`] };
+      return { lines: [pick([
+        `你替人做了一年活计，挣得 ${gain} 贯，腰背酸了一年。`,
+        `砖窑、码头、米行，哪有活就往哪去，一年攒下 ${gain} 贯。`,
+        `手艺不精，只能干粗活。一年下来，手上裂口没合过，挣 ${gain} 贯。`
+      ])] };
     }
   },
   {
@@ -151,7 +170,11 @@ const ACTIONS = [
       const gain = 1 + rnd(0, 2);
       S.money += gain; addStat('体魄', 1);
       grow(S, '农艺', 1);
-      return { lines: [`你在邻家帮了一年工，东家管饭，另给 ${gain} 贯。`] };
+      return { lines: [pick([
+        `你在邻家帮了一年工，东家管饭，另给 ${gain} 贯。`,
+        `你替人放牛、拾柴、挑水，年底东家给了 ${gain} 贯。`,
+        `你跟着大人下地，人小力气小，只挣得 ${gain} 贯，管两顿饭。`
+      ])] };
     }
   },
   {
@@ -172,6 +195,26 @@ const ACTIONS = [
       const loss = Math.round(stake * (0.4 + Math.random() * 0.7));
       S.money -= loss;
       return { lines: [`行情崩了，折了 ${loss} 贯。`], cls: 'down' };
+    }
+  },
+  {
+    id: 'ask_money', name: '向父母讨钱', cost: 0,
+    desc: '开口要钱，总要拿几分脸面去换',
+    req: (S) => (!S.parents.alive ? '双亲已故'
+      : (S.parents.favor >= 18 ? true : `父母已不愿再给（亲心 ${Math.round(S.parents.favor)}）`)),
+    run: (S) => {
+      const base = ASK_BASE[S.origin] || 2;
+      const f = (S.parents.favor || 50) / 100;
+      const got = Math.max(1, Math.round(base * (0.4 + f * 1.2) * (0.7 + Math.random() * 0.6)));
+      S.parents.favor = Math.max(0, S.parents.favor - 14);
+      S.money += got; addStat('德行', -1);
+      if (S.stats.名声 > 0) addStat('名声', -1);
+      return { lines: [pick([
+        `母亲从箱底摸出 ${got} 贯，塞进你袖子里，说别叫你父亲知道。`,
+        `父亲把烟袋在桌上磕了磕，半晌才拿出 ${got} 贯：“省着花。”`,
+        `你开了口，屋里静了一阵，最后凑出 ${got} 贯。`,
+        `母亲把陪嫁的银簪拿去当了，换回 ${got} 贯，没让你看她空了的耳垂。`
+      ]) + `（亲心 ${Math.round(S.parents.favor)}）`] };
     }
   },
   {
@@ -198,7 +241,7 @@ const ACTIONS = [
       if (S.age < e.age) return `须年满 ${e.age} 岁`;
       if (S.stats.才智 < e.wit) return `才学不足（需 ${e.wit}）`;
       if (S.rank >= 2 && S.year % 3 !== 0) return '乡试以上三年一科，今岁非大比之年';
-      if (S.money < e.fee) return `盘缠不足（需 ${e.fee} 贯）`;
+      if (S.money < e.fee) return `盘缠不足（需 ${e.fee} 贯），可向父母讨要`;
       return true;
     },
     run: (S) => {
@@ -326,7 +369,12 @@ const ACTIONS = [
     req: (S) => (S.parents.alive ? true : '双亲已故'),
     run: (S) => {
       addStat('德行', 5); addStat('名声', 2); S.health = Math.min(100, S.health + 2);
-      return { lines: ['你在床前侍奉了一整年，乡里都说你是孝子。'], cls: 'up' };
+      if (S.parents.favor !== undefined) S.parents.favor = Math.min(100, S.parents.favor + 12);
+      return { lines: [pick([
+        '你在床前侍奉了一整年，乡里都说你是孝子。',
+        '你替父亲捶背、替母亲挑水，一年下来，两个老人脸上的褶子都松了些。',
+        '冬夜母亲咳得厉害，你守到天亮。邻里看在眼里。'
+      ]) + `（亲心 ${Math.round(S.parents.favor || 0)}）`], cls: 'up' };
     }
   }
 ];
@@ -1397,7 +1445,7 @@ ACTIONS.push(
 
 /* ================= 年龄门槛：什么事到什么时候才能做 ================= */
 const AGE_MIN = {
-  study: 6, clinic: 6, heal: 6, piety: 6, chores: 6,
+  study: 6, clinic: 6, heal: 6, piety: 6, chores: 6, ask_money: 8,
   farm: 10, work: 10, bridge: 12, publish: 12, monitor: 12, social: 12, quit_trade: 12,
   craft: 14, exam: 8, guild: 16, land: 16, travel: 16, office: 16, yinguan: 16,
   garden: 16, furniture: 16, pawn_sell: 16, teach: 22, marry: 15
