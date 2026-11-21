@@ -608,7 +608,7 @@ function nextYear() {
 
   // 自家日用：口粮、布、盐，先吃仓里的
   if (!S.goods) S.goods = {};
-  if (!dependent && S.land < mouths) {
+  if (!dependent && S.land < mouths && S.trade !== 'nong') {   // 自家种地的，口粮从收成里留
     let needRice = Math.ceil(mouths * 1.2);
     const useRice = Math.min(needRice, S.goods.mi || 0);
     S.goods.mi = (S.goods.mi || 0) - useRice;
@@ -617,7 +617,7 @@ function nextYear() {
       const p = priceOf(S, GOODS.find(g => g.id === 'mi'));
       const cost = Math.round(needRice * p);
       if (S.money >= cost) { money(-cost); log(`仓中粮不够，按市价买了 ${needRice} 石。`, 'down'); }
-      else { S.health -= 8; addStat('名声', -2); log('粮不够，钱也没有，一家人饿了半年。', 'down'); }
+      else { S.health -= 8; addStat('名声', -2); log('粮不够，钱也没有，一家人饿了半年。（可去商店买米）', 'down'); }
     }
   }
 
@@ -689,7 +689,10 @@ function nextYear() {
     }
   }
   money(-(landTax + Math.round(corvee)));
-  if (landTax + corvee > 0) log(`纳税应役：田赋 ${landTax} 贯，均徳折银 ${Math.round(corvee)} 贯。`, 'down');
+  const taxParts = [];
+  if (landTax > 0) taxParts.push(`田赋 ${landTax} 贯`);
+  if (corvee > 0) taxParts.push(`均徳折银 ${Math.round(corvee)} 贯`);
+  if (taxParts.length) log(`纳税应役：${taxParts.join('，')}。`, 'down');
 
   // 廪米与俸禄
   if (S.rank === 2) money(1);
