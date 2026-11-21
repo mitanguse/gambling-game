@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>浮生·古代人生</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- 开始界面 -->
+  <section id="screen-title" class="screen active">
+    <div class="title-wrap">
+      <h1>浮 生</h1>
+      <p class="sub">古代人生模拟 · 一介布衣，百样活法</p>
+      <div class="bg-pick" id="bg-pick"></div>
+      <button class="main-btn" id="btn-start" disabled>择一出身，开卷</button>
+      <div id="continue-box" class="continue-box"></div>
+      <p class="hint">投到哪家不由人：家世定起点，命数自己走。读书能改命，也能读穷。</p>
+      <div id="family-chron" class="lineage"></div>
+    </div>
+  </section>
+
+  <!-- 游戏主界面 -->
+  <section id="screen-play" class="screen">
+    <header class="topbar">
+      <div class="who">
+        <span id="hud-name">——</span>
+        <span class="dot">·</span>
+        <span id="hud-age">——</span>
+        <span class="dot">·</span>
+        <span id="hud-era">——</span>
+      </div>
+      <div class="hud-right">
+        <span id="hud-rank" class="pill">白身</span>
+        <span id="hud-money" class="pill">家资 ——</span>
+        <span id="hud-health" class="pill">气血 ——</span>
+      </div>
+    </header>
+
+    <main class="layout">
+      <aside class="panel stats">
+        <h2>禀赋</h2>
+        <div id="stat-list"></div>
+        <h2>家业</h2>
+        <div id="estate-list" class="kv"></div>
+        <h2>身份</h2>
+        <div id="privilege-list" class="kv"></div>
+      </aside>
+
+      <section class="panel stage">
+        <div id="scene-text" class="scene">
+          <p class="muted">开卷。</p>
+        </div>
+        <div id="choices" class="choices"></div>
+        <div id="act-wrap">
+          <h3 class="act-title">岁末行事<span class="tip">（一年只做一件大事）</span></h3>
+          <div id="actions" class="act-groups"></div>
+        </div>
+      </section>
+
+      <aside class="panel family">
+        <h2>家口</h2>
+        <div id="family-list" class="kv"></div>
+        <h2>记事</h2>
+        <ul id="log" class="log"></ul>
+      </aside>
+    </main>
+  </section>
+
+  <!-- 结局界面 -->
+  <section id="screen-death" class="screen">
+    <div class="title-wrap">
+      <h1 id="death-cause">寿终</h1>
+      <p id="death-epitaph" class="sub"></p>
+      <div id="death-summary" class="summary"></div>
+      <div id="death-buttons" class="row-btns">
+        <button class="main-btn" id="btn-again">另开新族</button>
+      </div>
+      <div id="heir-btns" class="heir-btns"></div>
+      <div id="lineage" class="lineage"></div>
+    </div>
+  </section>
+
+</div>
+<script src="data.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
