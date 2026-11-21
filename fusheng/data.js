@@ -479,7 +479,7 @@ ACTIONS.push(
   {
     id: 'craft', name: '匠作', cost: 0,
     desc: '斧凿锯刨，手艺吃饭',
-    req: (S) => (S.flags.includes('手艺') || S.stats.体魄 >= 50 ? (S.trade === 'jiang' ? '已在此行' : true) : '体魄不足（需 50）'),
+    req: (S) => (S.gender === '女' ? '匠作不收女徒' : S.flags.includes('手艺') || S.stats.体魄 >= 50 ? (S.trade === 'jiang' ? '已在此行' : true) : '体魄不足（需 50）'),
     run: (S) => {
       S.trade = 'jiang';
       grow(S, '匠艺', rnd(2, 4));
@@ -864,6 +864,8 @@ function careerActions(def) {
       desc: def.join.desc || ('入门束修 ' + def.join.cost + ' 贯'),
       req: (S) => {
         if (S.trade === def.id) return '已在此行';
+        if (FEMALE_ONLY_TRADES.indexOf(def.id) >= 0 && S.gender !== '女') return '这门手艺只传女子';
+        if (MALE_ONLY_TRADES.indexOf(def.id) >= 0 && S.gender === '女') return '此行不收女眷';
         const r = def.join.req ? def.join.req(S) : true;
         if (r !== true) return r;
         if (S.money < def.join.cost) return '需 ' + def.join.cost + ' 贯';
@@ -1589,3 +1591,141 @@ const TRADE_EVENTS = {
     ] }
   ]
 };
+
+
+/* ================= 女行：明代女子自己的一口饭 ================= */
+const FEMALE_ONLY_TRADES = ['xiu', 'wen', 'nyi', 'ru', 'chu', 'mei', 'shi', 'nvs', 'dian'];
+const MALE_ONLY_TRADES = ['song', 'mu', 'li', 'jun', 'jiang', 'shang', 'biao'];
+
+const FEMALE_CAREERS = [
+  {
+    id: 'xiu',
+    join: { name: '学绣', cost: 4, req: (S) => (S.stats.容貌 >= 35 ? true : '手上不稳'), text: '你跟着绣坊的师傅学穿针，一年下来，指头扎满了眼。' },
+    work: { name: '做绣活', desc: '针线换钱，手快眼细', text: '你替绣庄做帕子、荷包、裙襕，一年下来眼睛熬得发花，钱是一个铜板一个铜板攒的。' },
+    fee: (lv, S) => 2 + lv * 3 + (S.fashion && S.fashion.id === 'su' ? 2 : 0),
+    effects: (S) => { addStat('名声', 1); },
+    flavor: '绣庄接了织造局的活，赶了三个月的夜工，交上去被挑了两处针脚。'
+  },
+  {
+    id: 'wen',
+    join: { name: '随稳婆学手', cost: 2, req: (S) => (S.age >= 14 ? true : '年纪太小'), text: '你跟着巷尾的老稳婆走门串户，先学洗手、备水、剪脐带。' },
+    work: { name: '接生', desc: '一手托两条命，夜里也要出门', text: '这一年你接了多少胎记不清了，只记得有几夜是在人家灶房等到天亮。' },
+    fee: (lv, S) => 2 + lv * 3,
+    effects: (S) => { addStat('德行', 2); },
+    flavor: '有户人家生了双胎，母子平安，塞给你一匹红布。'
+  },
+  {
+    id: 'nyi',
+    join: { name: '学女科', cost: 10, req: (S) => (S.stats.才智 >= 45 ? true : '才智不足（需 45）'), text: '你随一位女医抄方，学的是妇人调经、安胎、产后诸症。' },
+    work: { name: '看女科', desc: '内眷不便见男医，女医因此吃香', text: '你出入内宅替夫人小姐诊脉，药钱诊金都比男医低些，胜在人家肯让你进门。' },
+    fee: (lv, S) => 3 + lv * 4,
+    effects: (S) => { addStat('名声', 2); addStat('德行', 1); },
+    flavor: '有位小姐的病久治不愈，你换了方子，三个月后能下床了。'
+  },
+  {
+    id: 'ru',
+    join: { name: '入府做乳母', cost: 0, req: (S) => (S.children.length > 0 || S.age >= 18 ? true : '须生育过'), text: '你进了城东大户的门，给孩子喂奶，自己家的娃留在乡下。' },
+    work: { name: '乳养', desc: '吃住在主家，进项稳当，见不着自家孩子', text: '你在主家喂了一年孩子，主家待你不薄，只是夜里想起自家的娃，睡不踏实。' },
+    fee: (lv, S) => 2 + lv * 2,
+    effects: (S) => { addStat('名声', 1); },
+    flavor: '主家孩子认你，见你就伸手；主母看在眼里，脸色不太好。'
+  },
+  {
+    id: 'chu',
+    join: { name: '学庖厨', cost: 3, req: () => true, text: '你跟着厨下大娘学切配火候，先切了半年的菜。' },
+    work: { name: '掌灶', desc: '一手好菜，走到哪家都有人请', text: '你替人家办席面，四冷四热八碟，一天站到黑，赏钱是实打实的。' },
+    fee: (lv, S) => 2 + lv * 3,
+    effects: (S) => { addStat('名声', 1); },
+    flavor: '县里富户办寿宴，点了你的八宝鸭，事后又请你去做了一桌。'
+  },
+  {
+    id: 'mei',
+    join: { name: '随媒婆跑腿', cost: 1, req: (S) => (S.stats.容貌 >= 30 ? true : '不便抛头露面'), text: '你跟着城里有名的媒婆走街串巷，记人家的年岁、家底、脾气。' },
+    work: { name: '说亲', desc: '一张嘴走遍两城，成不成都有谢礼', text: '你一年说了十几门亲，成的有谢礼，不成也落一顿茶饭。' },
+    fee: (lv, S) => 2 + lv * 2 + Math.floor(S.stats.容貌 / 50),
+    effects: (S) => { addStat('名声', 1); addStat('德行', -1); },
+    flavor: '有一门亲事瞒了男方的病，过门后闹起来，人家堵着门骂了你三天。'
+  },
+  {
+    id: 'shi',
+    join: { name: '学跳神', cost: 2, req: () => true, text: '你跟着师婆学唱神歌、画符、烧纸，夜里在院子里练到嗓子哑。' },
+    work: { name: '做法事', desc: '禳灾祈福，信的人家舍得给钱', text: '你替人家禳灾、叫魂、送祟，锣鼓一响，围观的人比主家还多。' },
+    fee: (lv, S) => 1 + lv * 3,
+    effects: (S) => { addStat('名声', 1); },
+    flavor: '有户人家的孩子病了，你跳了一夜神，第二天孩子退了烧，你家门口排起了队。'
+  },
+  {
+    id: 'nvs',
+    join: { name: '设闺塾', cost: 8, req: (S) => (S.stats.才智 >= 55 ? true : '才智不足（需 55）'), text: '你在自家堂屋摆了几张矮桌，教邻里女孩认字、读《女诫》、做针线。' },
+    work: { name: '教女弟子', desc: '束脩不厚，胜在清白体面', text: '你教女孩们认字、写字、算账，一年收几份束脩，街坊都称你一声先生。' },
+    fee: (lv, S) => 2 + lv * 2 + Math.floor(S.stats.才智 / 40),
+    effects: (S) => { addStat('名声', 2); addStat('德行', 1); },
+    flavor: '有户人家说女儿不必读书，把娃领走了；你也没争，只在门口站了一会儿。'
+  },
+  {
+    id: 'dian',
+    join: { name: '开一间小铺', cost: 12, req: (S) => (S.money >= 12 ? true : '本钱不足'), text: '你盘下街口一间小铺面，卖茶、卖酒、卖几样点心。' },
+    work: { name: '当垆经营', desc: '站柜台、算账、应付客人，比谁都累', text: '你天不亮就起来烧水，夜里数完铜钱才睡。客人有轻薄的，你端起茶壶就泼过去。' },
+    fee: (lv, S) => 3 + lv * 4,
+    effects: (S) => { addStat('名声', 1); },
+    flavor: '有两个泼皮来吃白食，你叫了巡街的，从此没人敢在你铺里闹。'
+  }
+];
+
+
+TRADE_DEFS.push(
+  { id: 'xiu', name: '绣作', skill: '绣艺', epithet: '针神',   ranks: ['绣女', '绣娘', '绣作头', '绣庄掌事', '绣作大家'] },
+  { id: 'wen', name: '稳婆', skill: '接生术', epithet: '送子', ranks: ['帮手', '稳婆', '老稳婆', '接生圣手', '送子娘娘'] },
+  { id: 'nyi', name: '女科', skill: '女科术', epithet: '杏林女史', ranks: ['药婆', '女医', '女郎中', '女科圣手', '女国手'] },
+  { id: 'ru',  name: '乳养', skill: '乳养', epithet: '乳保',   ranks: ['帮佣', '乳母', '上房乳母', '府中管事', '官眷乳母'] },
+  { id: 'chu', name: '庖厨', skill: '庖艺', epithet: '鼎俎',   ranks: ['灶下丫头', '厨娘', '大厨娘', '府上庖头', '庖厨大家'] },
+  { id: 'mei', name: '说媒', skill: '媒才', epithet: '月老',   ranks: ['跑腿', '媒婆', '官媒', '城中第一媒', '官媒正'] },
+  { id: 'shi', name: '师婆', skill: '祝祷', epithet: '灵验',   ranks: ['烧香婆', '师婆', '跳神师婆', '掌坛', '一方灵应'] },
+  { id: 'nvs', name: '闺塾', skill: '闺学', epithet: '女先生', ranks: ['伴读', '塾师', '女塾师', '名门女师', '女中师表'] },
+  { id: 'dian', name: '当垆', skill: '店务', epithet: '女东家', ranks: ['帮工', '当垆女', '掌灶娘子', '女店主', '一方女东家'] }
+);
+
+FEMALE_CAREERS.forEach(d => ACTIONS.push(...careerActions(d)));
+
+Object.assign(TRADE_INCOME, {
+  xiu: [2, 4, 7, 12, 20],
+  wen: [2, 4, 6, 10, 16],
+  nyi: [3, 6, 10, 18, 30],
+  ru:  [2, 3, 5, 8, 13],
+  chu: [2, 4, 7, 11, 18],
+  mei: [2, 3, 5, 8, 13],
+  shi: [1, 3, 5, 9, 15],
+  nvs: [2, 4, 7, 11, 18],
+  dian: [3, 6, 10, 17, 28]
+});
+
+Object.assign(TRADE_EVENTS, {
+  xiu: [
+    { t: '织造局点绣', text: '织造局要一批龙袍补子，绣坊把头把活分了下来，工期只有两个月。', opts: [
+      { label: '连夜赶工', eff: { money: 6, skill: 5, health: -6 }, say: '你熬了两个月，眼睛肿了半个月，活计交上去受了赏。' },
+      { label: '推给别人做', eff: { money: 1, fame: -2 }, say: '你把活推出去了，工钱薄，坊里说你不担事。' },
+      { label: '只接一半', eff: { money: 3, skill: 2 }, say: '你量力接了一半，做完针脚齐整，没人挑出错。' }
+    ] }
+  ],
+  wen: [
+    { t: '难产', text: '半夜有人拍门，说媳妇难产，已经请了两个稳婆都没法子。', opts: [
+      { label: '立刻去', eff: { skill: 6, money: 3, fame: 3, health: -5 }, say: '你在产房里守到天亮，孩子落地时哭了一声，满屋人都瘫了。' },
+      { label: '推说不敢接', eff: { fame: -3 }, say: '你关了门，第二天听说母子都没保住。' },
+      { label: '荐老稳婆去', eff: { money: 1, fame: 1 }, say: '你把活荐给了师父，师父事后分了你一份谢礼。' }
+    ] }
+  ],
+  nyi: [
+    { t: '内宅请诊', text: '一位官眷产后失调，男医不便入内，托人请你去看。', opts: [
+      { label: '入宅诊治', eff: { skill: 5, money: 8, fame: 4 }, say: '你开了三剂方子，官眷气色渐好，府里送了你一匹绸。' },
+      { label: '只开方不进门', eff: { skill: 2, money: 3 }, say: '你隔帘问诊，开了方子，稳妥但挣得少。' },
+      { label: '辞了这桩', eff: { fame: -1 }, say: '你说自己医道尚浅，怕误了贵人。' }
+    ] }
+  ],
+  dian: [
+    { t: '泼皮吃白食', text: '两个泼皮赖在铺子里，吃了喝了不给钱，还说你家酒酸。', opts: [
+      { label: '叫巡街的来', eff: { money: -2, fame: 3 }, say: '你花了两个钱请巡街的来，泼皮被赶走，街坊都夸你有胆。' },
+      { label: '忍下这口气', eff: { money: -3, fame: -2 }, say: '你自认倒霉，往后他们来得更勤了。' },
+      { label: '拿茶壶泼过去', eff: { health: -3, fame: 2 }, say: '你端起滚茶泼过去，泼皮骂骂咧咧走了，你的手也被烫了。' }
+    ] }
+  ]
+});
