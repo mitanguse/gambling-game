@@ -240,7 +240,7 @@ function officeName() {
 
 const ACTION_GROUPS = [
   { name: '读书仕途', icon: '读', blurb: '苦读、赴考、为官、刻书', ids: ['study', 'exam', 'office', 'publish', 'monitor', 'yinguan'] },
-  { name: '营生', icon: '营', blurb: '农工商医与各门师承', ids: ['farm', 'work', 'trade', 'craft', 'learn_med', 'practice_med', 'teach_school', 'clerk', 'army', 'quit_trade', 'guild'], prefix: ['join_', 'work_'] },
+  { name: '营生', icon: '营', blurb: '农工商医与各门师承', ids: ['farm', 'work', 'chores', 'trade', 'craft', 'learn_med', 'practice_med', 'teach_school', 'clerk', 'army', 'quit_trade', 'guild'], prefix: ['join_', 'work_'] },
   { name: '家事', icon: '家', blurb: '说亲、教子、请医', ids: ['marry', 'teach', 'heal'] },
   { name: '人际', icon: '人', blurb: '侍奉父母、交游宴客', ids: ['piety', 'social', 'fun_jiu', 'travel'] },
   { name: '家业', icon: '业', blurb: '置田、开店、造园', ids: ['land', 'garden', 'furniture', 'bridge'], prefix: ['open_'] },
@@ -649,6 +649,7 @@ function nextYear() {
   const landTax = Math.round(S.land * 0.25);
   const hh = HOUSEHOLDS[S.household] || HOUSEHOLDS['民户'];
   let corvee = hh.corvee + hh.extra;
+  if (S.age < 16) corvee = 0;            // 均德按丁征，未成年不当差
   if (S.rank >= 4 || S.office.granted) corvee = 0;
   else if (S.rank === 3) corvee = Math.max(0, corvee - 2);
   else if (S.rank === 2) corvee = Math.max(0, corvee - 1);
@@ -747,15 +748,53 @@ function nextYear() {
   if (S.health <= 0) return die('气血耗尽');
   if (S.age >= MAX_YEAR || Math.random() < deathRisk) return die(S.age >= 60 ? '寿终正寝' : '一病不起');
 
-  // 新一年的开场
-  const openings = [
-    `天启 ${S.year + 1} 年，${seasonText()}。`,
-    `又一年过去了。${S.age} 岁的你，站在院中看了一会儿天。`,
-    `春耕、夏汛、秋收、冬藏，一年又这么过去了。`,
-    `镜中的人又老了一岁。${S.health < 50 ? '近来总觉得气短。' : '身体还算康健。'}`
-  ];
-  scene(`${S.age} 岁`, pick(openings) + `\n家资 ${S.money} 贯，田 ${S.land} 亩。`);
+  // 新一年的开场（按年纪换说法，别让九岁的小孩在镜子里“又老了一岁”）
+  scene(`${S.age} 岁`, openLine() + `\n家资 ${S.money} 贯，田 ${S.land} 亩。`);
   render();
+}
+
+function openLine() {
+  const a = S.age;
+  const weak = S.health < 50;
+  const y = `天启 ${S.year + 1} 年，${seasonText()}。`;
+  if (a <= 12) {
+    return pick([
+      y + '你又长高了一点，衣裳短了一截。',
+      y + (weak ? '你近来总是咳，母亲半夜起来给你添被。' : '你跑得比去年快了。'),
+      '一年过去，你已经能帮家里做些轻活。',
+      '巷子里的路你跑熟了，谁家灶上烧什么，你都知道。'
+    ]);
+  }
+  if (a <= 19) {
+    return pick([
+      y,
+      `又一年。${a} 岁的你，站在院中看了一会儿天。`,
+      '镜子里的脸褪了稚气，眉眼渐渐定了。',
+      y + (weak ? '你近来总觉得乏力，饭量也小了。' : '身板渐渐长开，穿的衣裳要重新做。')
+    ]);
+  }
+  if (a <= 39) {
+    return pick([
+      y,
+      `又一年过去了。${a} 岁的你，站在院中看了一会儿天。`,
+      '春耕、夏汛、秋收、冬藏，一年又这么过去了。',
+      y + (weak ? '这一年身子不大爽利，做事总提不起劲。' : '肩上的担子比去年重了些。')
+    ]);
+  }
+  if (a <= 59) {
+    return pick([
+      y,
+      `又一年。${a} 岁的你，眼角添了一道纹。`,
+      '腰背开始发沉，蹲下去再站起来要缓一缓。',
+      y + (weak ? '夜里睡不踏实，天亮得比从前早。' : '身子还算过得去，只是不如从前经折腾。')
+    ]);
+  }
+  return pick([
+    `镜中的人又老了一岁。${weak ? '近来总觉得气短。' : '身体还算康健。'}`,
+    y + '你走得慢了些，拄杖的时候多了。',
+    `又一年。${a} 岁的你，坐在门槛上晒太阳。`,
+    y + (weak ? '这场风寒拖了半个月，人瘦了一圈。' : '饭还能吃两碗，只是牙口不如从前。')
+  ]);
 }
 
 function seasonText() {
