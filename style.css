@@ -205,3 +205,11 @@ h1{font-size:52px;letter-spacing:.35em;margin:0 0 6px;font-weight:600}
 .act-card .bl{padding-right:34px}
 
 .act-card .bl{padding-right:0}
+
+/* 近事：併到场景下方，反馈与流水在同一视线里 */
+.recent{margin:8px 0 2px;border-top:1px solid var(--line);padding-top:8px}
+.recent summary{cursor:pointer;list-style:none;font-size:13px;letter-spacing:.2em;color:var(--ink-2);user-select:none;padding:2px 0}
+.recent summary::-webkit-details-marker{display:none}
+.recent summary::before{content:'▸';margin-right:7px;color:var(--line);display:inline-block}
+.recent[open] summary::before{content:'▾'}
+.recent .log{max-height:168px;margin-top:4px}
