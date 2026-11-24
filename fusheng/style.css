@@ -230,3 +230,7 @@ h1{font-size:52px;letter-spacing:.35em;margin:0 0 6px;font-weight:600}
 .end-row{display:flex;justify-content:center;margin-top:12px}
 .ghost-btn.small{font-size:13px;padding:6px 20px;letter-spacing:.12em}
 .ghost-btn.urgent{border-color:var(--red);color:var(--red)}
+
+/* 自动播放按钮 */
+.end-row{gap:10px;flex-wrap:wrap}
+.auto-btn.on{border-color:var(--red);color:var(--red)}

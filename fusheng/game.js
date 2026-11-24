@@ -35,6 +35,10 @@ function loadGame() {
   S.shop = (S.shops || []).length;
   if (!S.goods) S.goods = {};
   if (!S.market) S.market = { mi: 1, bu: 1, cha: 1, yao: 1, ci: 1, tie: 1, si: 1, yan: 1 };
+  if (!S.era) S.era = { liaoxiang: 0, famine: 0, war: 0, purge: 0 };   // 时局计数器（旧存档补上）
+  if (!S.histDone) S.histDone = {};
+  if (typeof S.birthYear !== 'number') S.birthYear = 1612 - (S.age || 0);   // 旧存档：按原万历四十年出生推算
+  if (typeof S.speed !== 'number') S.speed = 0;
   // 旧存档里重名的孩子，补一个区别字
   const seen = {};
   (S.children || []).forEach(c => {
@@ -85,6 +89,10 @@ function newLife(famId, heir) {
     shops: fam.shop ? [{ id: 'chouduan' }] : [],
     goods: {},
     market: { mi: 1, bu: 1, cha: 1, yao: 1, ci: 1, tie: 1, si: 1, yan: 1 },
+    era: { liaoxiang: 0, famine: 0, war: 0, purge: 0 },   // 时局：辽饷／旱蝗／兵荒／党锢
+    birthYear: 1368 + Math.floor(Math.random() * 269),    // 随机生在明朝：洪武元年——崇祯九年
+    histDone: {},                                        // 朝局年表已遇过的事件
+    speed: 0,                                            // 自动播放速度档位
     fame: fam.fame,
     rank: 0,                     // 0 白身 … 4 进士
     office: { granted: false, power: 0 },
@@ -169,15 +177,16 @@ function scene(title, body) {
 }
 
 function render() {
+  if (S.money < 0) S.money = 0;   // 家资不显负数（事件里可能直接扣钱）
   const rn = S.rank >= 4 ? (S.office.granted ? officeName() : '进士') : RANK_NAMES[S.rank];
   document.getElementById('hud-name').textContent = S.name;
   document.getElementById('hud-age').textContent = `${S.age} 岁`;
-  document.getElementById('hud-era').textContent = `天启 ${S.year + 1} 年`;
+  document.getElementById('hud-era').textContent = reignOf((S.birthYear || 1590) + S.age);
   document.getElementById('hud-rank').textContent = rn;
   document.getElementById('hud-money').textContent = `家资 ${S.money} 贯`;
   document.getElementById('hud-health').textContent = `气血 ${S.health}`;
   const apEl = document.getElementById('hud-ap');
-  if (apEl) apEl.textContent = `${seasonOf(S.ap)} · 精力 ${S.ap}/${S.apMax}`;
+  if (apEl) apEl.textContent = `重心 ${S.focus || '未定'}`;
   const gEl = document.getElementById('hud-gender');
   if (gEl) gEl.textContent = `身 ${S.gender || '男'}`;
   renderTrade();
@@ -333,7 +342,7 @@ function renderTrade() {
 function actionState(a) {
   const zx = zuXunBlocked(S, a.id) || ageBlocked(S, a.id) || a.req(S);
   if (zx !== true) return zx;
-  if (S.ap < apCost(a)) return `精力不足（需 ${apCost(a)} 分，仅剩 ${S.ap} 分）`;
+  if (S.ap < apCost(a)) return '本年已安排妥当，明年再说';
   return true;
 }
 
@@ -343,48 +352,96 @@ function actionButton(a) {
   const ds = a.descOf ? a.descOf(S) : a.desc;
   const btn = document.createElement('button');
   btn.className = 'act';
-  btn.innerHTML = `${nm}<small>${ok === true ? ds : ok}</small><i class="apc">${apCost(a)} 分</i>`;
+  btn.innerHTML = `${nm}<small>${ok === true ? ds : ok}</small>`;
   btn.disabled = ok !== true;
   btn.onclick = () => doAction(a);
   return btn;
 }
 
-/* ---------- 主界面：只有一张张门（行动卡） ---------- */
+/* ---------- 年度重心：仿《八十亿分之一》——不摆精力，只选今年往哪走 ---------- */
+const FOCUS = [
+  { name: '读书', icon: '读', blurb: '苦读、课业、文章', ids: ['study', 'monitor'] },
+  { name: '营生', icon: '营', blurb: '种地、做工、本行手艺', ids: ['farm', 'work', 'chores', 'trade', 'craft', 'learn_med', 'practice_med', 'teach_school', 'clerk', 'army'], prefix: ['work_'] },
+  { name: '家事', icon: '家', blurb: '侍亲、教子、养病', ids: ['piety', 'teach', 'heal'] },
+  { name: '交际', icon: '人', blurb: '交游、宴客、远行', ids: ['social', 'fun_jiu', 'travel'] }
+];
+
+function inFocus(a, f) {
+  return f.ids.includes(a.id) || (f.prefix || []).some(p => a.id.startsWith(p));
+}
+
+function focusYear(name) {
+  if (S.over || pendingEvent) return;
+  if (document.querySelector('#choices .choice')) return;
+  const f = FOCUS.find(x => x.name === name);
+  if (!f) return;
+  const lines = [];
+  let n = 0, flow = null;
+  for (let i = 0; i < 14 && S.ap > 0; i++) {
+    const cands = ACTIONS.filter(a => inFocus(a, f) && actionState(a) === true);
+    if (!cands.length) break;
+    cands.sort((x, y) => apCost(x) - apCost(y));   // 先做轻的，尽量多做事
+    const a = cands[0];
+    S.ap -= apCost(a);
+    const res = a.run(S) || {};
+    (res.lines || []).forEach(l => lines.push(l));
+    n++;
+    if (res.flow) { flow = res.flow; break; }
+  }
+  S.focus = name;
+  log(`本年以「${name}」为重心，做了 ${n} 件事。`, n ? 'up' : '');
+  lines.forEach(l => log(l, ''));
+  scene(`${S.age} 岁 · ${name}`, lines.length ? lines.join('\n') : '这一年没做成什么，日子空过去了。');
+  S.health = clamp(S.health);
+  if (S.health <= 0) return die('积劳成疾，油尽灯枯');
+  if (flow) return startFlow(flow);
+  endYear();
+}
+
+/* ---------- 主界面：四扇重心 + 细务 ---------- */
 function renderActions() {
+  if (S.money < 0) S.money = 0;
   const grid = document.getElementById('action-grid');
   if (!grid) return;
-  const buckets = ACTION_GROUPS.map(g => ({ meta: g, items: [] }));
-  const other = { meta: { name: '其他', icon: '杂', blurb: '杂项' }, items: [] };
-  ACTIONS.forEach(a => {
-    if (S.careerLocked && isEntryAction(a) && entryTradeOf(a) !== S.trade) return;   // 定了业，别家的门不再开
-    const g = groupOf(a);
-    const b = g ? buckets.find(b => b.meta.name === g.name) : other;
-    if (b) b.items.push(a);
-  });
-
   grid.innerHTML = '';
-  buckets.concat([other]).forEach(b => {
-    if (!b.items.length) return;
-    const avail = b.items.filter(a => actionState(a) === true).length;
+
+  FOCUS.forEach(f => {
+    const items = ACTIONS.filter(a => inFocus(a, f));
+    const avail = items.filter(a => actionState(a) === true).length;
     const card = document.createElement('button');
     card.className = 'act-card' + (avail ? '' : ' none');
-    card.innerHTML = `<span class="seal">${b.meta.icon}</span><span class="nm">${b.meta.name}</span>` +
-      `<span class="bl">${b.meta.blurb}</span><span class="n">${avail}/${b.items.length} 可做</span>`;
-    card.onclick = () => openCategory(b.meta.name);
+    card.innerHTML = `<span class="seal">${f.icon}</span><span class="nm">${f.name}</span>` +
+      `<span class="bl">${f.blurb}</span><span class="n">${avail ? avail + ' 可做' : '本年做不得'}</span>`;
+    card.onclick = () => focusYear(f.name);
     grid.appendChild(card);
   });
 
+  const more = document.createElement('button');
+  more.className = 'act-card';
+  more.innerHTML = '<span class="seal">细</span><span class="nm">细务</span>' +
+    '<span class="bl">置田、开店、婚配、赴考</span><span class="n">自己挑</span>';
+  more.onclick = () => openCategory('细务');
+  grid.appendChild(more);
+
   if (document.getElementById('cat-modal').hidden === false) refreshCategory();
+
+  if (!pendingEvent && !document.querySelector('#choices .choice')) {
+    document.getElementById('choices').innerHTML = '';
+  }
 
   const endBtn = document.getElementById('btn-end-year');
   if (endBtn) {
-    const left = Math.max(0, S.ap || 0);
-    const affordable = ACTIONS.some(a => actionState(a) === true);
-    endBtn.hidden = left <= 0;
-    endBtn.textContent = affordable ? `歇冬 · 余 ${left} 分不用了` : `无轻省事可做 · 过完这一年`;
-    endBtn.classList.toggle('urgent', !affordable);
+    endBtn.hidden = false;
+    endBtn.textContent = '虚度一年 · 直接过';
+    endBtn.classList.remove('urgent');
   }
-  document.getElementById('choices').innerHTML = '';
+  const autoBtn = document.getElementById('btn-auto');
+  if (autoBtn) {
+    autoBtn.textContent = S.auto ? '暂停' : '自动播放';
+    autoBtn.classList.toggle('on', !!S.auto);
+  }
+  const spBtn = document.getElementById('btn-speed');
+  if (spBtn) spBtn.textContent = `${SPEEDS[S.speed || 0]}×`;
 }
 
 /* ---------- 二级界面 ---------- */
@@ -413,8 +470,11 @@ function fillCategory() {
   if (!curCat) return;
   const box = document.getElementById('cat-actions');
   box.innerHTML = '';
-  const items = ACTIONS.filter(a => (groupOf(a) || {}).name === curCat &&
-    !(S.careerLocked && isEntryAction(a) && entryTradeOf(a) !== S.trade));
+  const items = ACTIONS.filter(a => {
+    if (S.careerLocked && isEntryAction(a) && entryTradeOf(a) !== S.trade) return false;
+    if (curCat === '细务') return true;
+    return (groupOf(a) || {}).name === curCat;
+  });
   const avail = items.filter(a => actionState(a) === true).length;
   document.getElementById('cat-sub').textContent = `${avail}/${items.length} 可做`;
   if (!items.length) {
@@ -447,7 +507,7 @@ function doAction(a) {
   if (ab) return;
   const cost = apCost(a);
   if (S.ap < cost) {
-    scene('精力不济', `今年只剩 ${S.ap} 分精力，这件事要 ${cost} 分。\n换一件轻省的，或者等来年开春。`);
+    scene('本年已满', `这一年已经安排满了，这件事做不了。\n要么明年再做，要么今年把重心放在别处。`);
     return;
   }
   S.ap -= cost;
@@ -642,11 +702,9 @@ function birthOutcome() {
 }
 
 function endYear() {
-  if (S.over) return;
+  if (S.over || pendingEvent) return;
   if (document.querySelector('#choices .choice')) return;
-  S.ap = 0;
-  const ev = rollEvent();
-  if (ev) { showEvent(ev); return; }
+  S.focus = '虚度';
   nextYear();
 }
 
@@ -654,13 +712,108 @@ function afterAction() {
   S.health = clamp(S.health);
   checkMastery();
   if (S.health <= 0) return die('积劳成疾，油尽灯枯');
-  if (S.ap > 0) { render(); return; }
-  const ev = rollEvent();
-  if (ev) { showEvent(ev); return; }
-  nextYear();
+  render();
+}
+
+/* ---------- 关键抉择：非做不可的人生关口 ---------- */
+function rollDecision() {
+  S.decDone = S.decDone || {};
+  const pool = DECISIONS.filter(d =>
+    !S.decDone[d.id] && S.age >= d.age[0] && S.age <= d.age[1] && (!d.cond || d.cond(S) === true));
+  if (!pool.length) return false;
+  let d = pool.find(x => x.node) || null;
+  if (!d && Math.random() < 0.22) {
+    const total = pool.reduce((s, x) => s + (x.w || 1), 0);
+    let r = Math.random() * total;
+    for (const x of pool) { r -= (x.w || 1); if (r <= 0) { d = x; break; } }
+    d = d || pool[0];
+  }
+  if (!d) return false;
+  showDecision(d);
+  return true;
+}
+
+function showDecision(d) {
+  S.decDone[d.id] = 1;
+  if (S.auto) stopAuto();
+  const opts = d.choices.filter(c => !c.req || c.req(S) === true).map(c => ({
+    label: c.label,
+    run: () => ({ lines: (c.run(S) || []) })
+  }));
+  askStep('人生关口', d.text(S), opts, () => { render(); });
+}
+
+/* ---------- 自动播放：点了才自己跑完 ---------- */
+let autoTimerId = null;
+const SPEEDS = [0.5, 1, 2, 3];
+const MILESTONES = [5, 15, 30, 50, 70];
+
+function speedMs() { return Math.round(1100 / SPEEDS[S.speed || 0]); }
+
+function cycleSpeed() {
+  S.speed = ((S.speed || 0) + 1) % SPEEDS.length;
+  if (S.auto) { clearInterval(autoTimerId); autoTimerId = setInterval(autoTick, speedMs()); }
+  log(`自动播放速度：${SPEEDS[S.speed]} 倍。`, '');
+  render();
+}
+
+/* 人生回望：五、十五、三十、五十、七十岁停一次 */
+function showMilestone() {
+  if (S.auto) stopAuto();
+  const rn = S.rank >= 4 ? (S.office.granted ? officeName() : '进士') : RANK_NAMES[S.rank];
+  const fam = 1 + (S.spouse ? 1 : 0) + S.children.length;
+  const txt = [
+    `家资 ${S.money} 贯，田 ${S.land} 亩，铺 ${(S.shops || []).length} 间。`,
+    `功名 ${rn}，名声 ${S.fame}，营生 ${TRADES[S.trade] || '尚无恒业'}。`,
+    `家口 ${fam} 人，气血 ${S.health}。`,
+    S.era && S.era.liaoxiang ? '这些年辽饷一直摊在田上。' : '',
+    S.era && S.era.famine ? '连年旱蝗，仓里一直没满过。' : ''
+  ].filter(Boolean).join('\n');
+  askStep(`${S.age} 岁 · 回望`, txt, [{ label: '接着往下走' }], () => { render(); });
+}
+
+function toggleAuto() {
+  if (S.auto) { stopAuto('已停止自动播放。'); return; }
+  S.auto = true;
+  log('开始自动播放。遇随机事自行处置，遇人生关口停下等你。', 'up');
+  render();
+  autoTimerId = setInterval(autoTick, speedMs());
+}
+
+function stopAuto(msg) {
+  S.auto = false;
+  if (autoTimerId) { clearInterval(autoTimerId); autoTimerId = null; }
+  if (msg) log(msg, '');
+  render();
+}
+
+function autoTick() {
+  if (!S.auto || S.over) { stopAuto(); return; }
+  if (pendingEvent) return;
+  if (document.querySelector('#choices .choice')) return;   // 等玩家决断
+  const f = FOCUS[Math.floor(Math.random() * FOCUS.length)];
+  focusYear(f.name);
 }
 
 function rollEvent() {
+  // 朝局年表：史有其事的大势，按绝对年份对（主角出生年随机）
+  S.histDone = S.histDone || {};
+  const absYear = (S.birthYear || 1580) + S.age;
+  const hist = (typeof HIST_EVENTS !== 'undefined' ? HIST_EVENTS : []).filter(e => {
+    const sp = e.span || [-1, -1];
+    return absYear >= sp[0] && absYear <= sp[1] && !S.histDone[e.id] && (!e.cond || e.cond(S) === true);
+  });
+  if (hist.length) {
+    const he = pick(hist);
+    S.histDone[he.id] = 1;
+    // 十岁以下：大事由家里承担，孩子只记得大人们发愁
+    if (S.age < 10) {
+      if (he.child) he.child(S);
+      log(`家里说：${String(he.title || '').replace(/^(朝局|天时|鼎革) · /, '')}。大人们愁了好些天。`, 'down');
+      return null;
+    }
+    return he;
+  }
   // 幼年不遇外事
   if (S.age < 10) return null;
   // 岁令：先看当年时令之事
@@ -691,7 +844,15 @@ function showEvent(e) {
     box.appendChild(b);
   });
   document.getElementById('scene-text').innerHTML =
-    `<p><b>这一年，出了件事</b></p><p>${e.text(S)}</p><p class="muted">如何应对？</p>`;
+    `<p><b>${e.title || '这一年，出了件事'}</b></p><p>${e.text(S)}</p><p class="muted">如何应对？</p>`;
+  if (S.auto) {
+    setTimeout(() => {
+      if (pendingEvent === e) {
+        const c = e.choices.find(x => !x.req || x.req(S) === true);
+        if (c) { log('（自动处置）', ''); resolveEvent(c); }
+      }
+    }, 900);
+  }
 }
 
 function resolveEvent(c) {
@@ -703,7 +864,7 @@ function resolveEvent(c) {
   scene('后果', lines.join('\n') || '事情就这么过去了。');
   S.health = clamp(S.health);
   if (S.health <= 0) return die('伤病交加，药石无灵');
-  nextYear();
+  render();
 }
 
 /* ---------- 年份推进 ---------- */
@@ -803,7 +964,7 @@ function nextYear() {
   if (dec > 0) addStat('名声', Math.floor(dec / 5));
 
   // 赋役（明制：田赋 + 均徳折银，功名优免）
-  const landTax = Math.round(S.land * 0.25);
+  const landTax = Math.round(S.land * (0.25 + 0.05 * ((S.era && S.era.liaoxiang) || 0)));
   const hh = HOUSEHOLDS[S.household] || HOUSEHOLDS['民户'];
   let corvee = hh.corvee + hh.extra;
   if (S.age < 16) corvee = 0;            // 均德按丁征，未成年不当差
@@ -903,6 +1064,13 @@ function nextYear() {
 
   if (S.money < 0) S.money = 0;
 
+  // 时局消退：旱蝗、兵荒会逐年缓解，辽饷则是长效机制
+  if (S.era) {
+    if (S.era.famine) S.era.famine = Math.max(0, S.era.famine - 1);
+    if (S.era.war) S.era.war = Math.max(0, S.era.war - 1);
+    if (S.era.purge) S.era.purge = Math.max(0, S.era.purge - 1);
+  }
+
   // 衰老与死亡
   const deathRisk = S.age > 55 ? (S.age - 55) * 0.012 + Math.max(0, (40 - S.health) / 900) : Math.max(0, (25 - S.health) / 1400);
   if (S.health <= 0) return die('气血耗尽');
@@ -911,6 +1079,13 @@ function nextYear() {
   // 新一年的开场（按年纪换说法，别让九岁的小孩在镜子里“又老了一岁”）
   scene(`${S.age} 岁`, openLine() + '\n' + estateLine());
   render();
+
+  // 五、十五、三十、五十、七十：停下来回望一眼
+  if (MILESTONES.includes(S.age) && !(S.mile || {})[S.age]) {
+    S.mile = S.mile || {};
+    S.mile[S.age] = 1;
+    return showMilestone();
+  }
 
   // 六岁：开蒙（读档进来的老角色跳过）
   if (S.age >= 6 && S.age < 14 && !S.careerPicked6) {
@@ -928,7 +1103,13 @@ function nextYear() {
   if (S.trade !== 'none' && !S.over && Math.random() < 0.55) {
     const ev = pick(TRADE_EVENTS[S.trade] || TRADE_EVENTS._any);
     if (ev) tradeEvent(ev);
+    return;   // 行中事先处置，本年不再叠加别的
   }
+
+  // 时间走到这里：先看有没有非过不可的关口，再掷一次随机事
+  if (rollDecision()) return;
+  const ev = rollEvent();
+  if (ev) showEvent(ev);
 }
 
 /* 十四岁择业：把选择摆到面前，而不是埋在二级菜单里 */

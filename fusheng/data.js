@@ -1141,6 +1141,10 @@ function priceOf(S, g) {
     if (mon >= 9 && mon <= 10) m *= 0.78;     // 秋收
   }
   if (g.id === 'yao' && S.flags && S.flags.includes('疫年')) m *= 1.6;
+  // 时局：旱蝗则粮贵，兵荒则铁贵
+  const era = S.era || {};
+  if (g.id === 'mi' && era.famine) m *= 1 + 0.22 * era.famine;
+  if ((g.id === 'tie' || g.id === 'mi') && era.war) m *= 1 + 0.12 * era.war;
   return Math.max(0.3, g.base * m);
 }
 
@@ -1734,3 +1738,462 @@ Object.assign(TRADE_EVENTS, {
     ] }
   ]
 });
+
+/* ================= 关键抉择（时间流逝中弹出的人生岔路） =================
+   与随机事件不同：这些是「非做不可」的关口，选了就留下长期后果。
+   node=true 的在年龄窗口内必定弹出一次；其余按 w 权重随机穿插。
+   字段：id / age:[最小,最大] / cond / node / w / once / text(S) / choices[{label,req,run}] */
+const DECISIONS = [
+  {
+    id: 'd_school', age: [7, 9], node: true, once: true,
+    cond: (S) => !S.schoolDecided && !S.careerPicked6 && S.rank < 1,
+    text: () => '蒙学的先生上门，说你家的孩子该定个去处了：是跟着念书，还是早些下地学活。',
+    choices: [
+      { label: '送去念书，一年灯油束脩 2 贯', req: (S) => S.money >= 2,
+        run: (S) => { S.schoolDecided = 'study'; money(-2); S.path = 'study'; addStat('才智', 6); return ['你进了蒙学，先生夸你记性好。往后每年读书都多一分希望。']; } },
+      { label: '不念了，跟着家里学活计', run: (S) => { S.schoolDecided = 'work'; addStat('体魄', 5); addStat('才智', -2); return ['你放下了书，拿起锄头。手上很快磨出了茧。']; } },
+      { label: '再等一年看看', run: (S) => ['先生叹了口气，把话说回去，让你家再想想。'] }
+    ]
+  },
+  {
+    id: 'd_marry', age: [17, 20], node: true, once: true,
+    cond: (S) => !S.spouse,
+    text: () => '父母把你叫到堂前：年岁到了，该说亲了。托媒人要花钱，但再拖下去，好人家就挑不着了。',
+    choices: [
+      { label: '托媒人去说（花 3 贯）', req: (S) => S.money >= 3,
+        run: (S) => { money(-3); addStat('名声', 2); S.wantMarry = true; return ['媒婆揣着银子出了门，说这几日就有回话。']; } },
+      { label: '先立业，婚事再缓', run: (S) => { addStat('名声', -1); return ['你推说要先挣个出身，父母脸色不好看，终究没再逼。']; } },
+      { label: '自己在外头相看', run: (S) => { addStat('气运', 2); return ['你不肯听凭父母之命，说要在外头自己寻一个合意的。']; } }
+    ]
+  },
+  {
+    id: 'd_exam_quit', age: [22, 32], once: true, w: 3,
+    cond: (S) => S.rank < 2 && S.age >= 22,
+    text: (S) => `你考了这些年，卷子摞起来有半人高，功名仍停在${RANK_NAMES[S.rank]}。先生劝你，要么豁出去再搏一科，要么早些收手。`,
+    choices: [
+      { label: '再搏一科，盘缠束脩 8 贯', req: (S) => S.money >= 8,
+        run: (S) => { money(-8); addStat('才智', 4); addStat('名声', 1); return ['你把束脩交了上去，心里发狠：这是最后一次。']; } },
+      { label: '收手，回家谋生', run: (S) => { addStat('体魄', 3); addStat('名声', -2); S.path = 'work'; return ['你把书箱锁进柜底，从此再不提科场二字。']; } },
+      { label: '一边教书一边再考', run: (S) => { addStat('才智', 2); money(2); return ['你在乡塾坐馆，白天教童子，夜里自己点灯读书。']; } }
+    ]
+  },
+  {
+    id: 'd_land', age: [22, 60], once: true, w: 2,
+    cond: (S) => S.money >= 40,
+    text: () => '邻村有户人家要迁走，二十亩水田贱价出售。买下来是长远生计，银子却要一次掏空。',
+    choices: [
+      { label: '买下这二十亩（40 贯）', req: (S) => S.money >= 40,
+        run: (S) => { money(-40); S.land += 20; addStat('名声', 4); return ['契书按了手印，田契收进匣子里。从此你每年有租可收。']; } },
+      { label: '只买十亩，留些活钱（20 贯）', req: (S) => S.money >= 20,
+        run: (S) => { money(-20); S.land += 10; return ['你只买了十亩，剩下的银子留着过年。']; } },
+      { label: '不买，银子攥在手里', run: (S) => { addStat('名声', -1); return ['你怕田多税重，终究没敢下手。']; } }
+    ]
+  },
+  {
+    id: 'd_office_gray', age: [25, 65], once: true, w: 3,
+    cond: (S) => S.office && S.office.granted,
+    text: () => '治下的粮商夜里登门，留下一只匣子，说是「一点土仪」，只求往后验粮时松一松手。',
+    choices: [
+      { label: '收下，替他行个方便', run: (S) => { money(20); addStat('德行', -6); addStat('名声', -3); if (!S.flags.includes('污点')) S.flags.push('污点'); return ['匣子里是二十贯足银。你收了，从此看他的眼神不一样了。']; } },
+      { label: '原封退回，照章验粮', run: (S) => { addStat('德行', 6); addStat('名声', 4); S.office.power += 3; return ['你把匣子推回去，粮商脸色变了变，终究没敢多话。']; } },
+      { label: '收下，但只此一次', run: (S) => { money(10); addStat('德行', -2); return ['你收了半匣，把话挑明：下不为例。']; } }
+    ]
+  },
+  {
+    id: 'd_child', age: [30, 55], once: true, w: 3,
+    cond: (S) => (S.children || []).some(c => c.age >= 6 && c.age <= 10),
+    text: () => '孩子到了开蒙的年纪。是送去读书搏一个出身，还是留在家里学一门糊口的手艺？',
+    choices: [
+      { label: '送去读书（5 贯）', req: (S) => S.money >= 5,
+        run: (S) => { money(-5); (S.children || []).forEach(c => { if (c.age >= 6 && c.age <= 10) c.wit = clamp(c.wit + 6); }); addStat('名声', 2); return ['孩子背起书包进了学，回来时嘴里念着「天地玄黄」。']; } },
+      { label: '留在家里学手艺', run: (S) => { (S.children || []).forEach(c => { if (c.age >= 6 && c.age <= 10) c.wit = clamp(c.wit + 2); }); money(2); return ['孩子跟着你学活，手上很快有了力气。']; } }
+    ]
+  },
+  {
+    id: 'd_split', age: [52, 62], once: true, w: 2,
+    cond: (S) => (S.children || []).filter(c => c.age >= 16).length >= 2,
+    text: () => '两个儿子都成了家，一锅里吃饭，锅沿总要碰。族老问你：分不分家？',
+    choices: [
+      { label: '分家，各立门户', run: (S) => { const half = Math.round(S.land / 2); S.land -= half; money(-Math.round(S.money * 0.3)); addStat('德行', 2); addStat('名声', 1); return [`你把 ${half} 亩田与三成家资分了出去，各房单过。`]; } },
+      { label: '不分，一家人守在一处', run: (S) => { addStat('名声', -1); S.health -= 2; return ['你说树大分枝，人还没老，先不分。媳妇们脸上不太好看。']; } }
+    ]
+  },
+  {
+    id: 'd_old', age: [58, 70], once: true, w: 2,
+    cond: (S) => (S.children || []).some(c => c.age >= 16),
+    text: () => '你自觉精神不济。族中有人劝你早些把家事交出去，也有人说，掌家的权一放就收不回来。',
+    choices: [
+      { label: '把家事交给长子', run: (S) => { S.headGiven = true; addStat('德行', 3); money(-2); return ['你把钥匙与账本交到长子手里，从此只管含饴弄孙。']; } },
+      { label: '仍旧自己掌着', run: (S) => { S.health -= 3; addStat('名声', 1); return ['你不肯放权，病中还要过问账目。']; } }
+    ]
+  }
+];
+
+/* ================= 朝局年表（天启—崇祯，按年份触发，一辈子只遇一次） =================
+   与随机事件不同：这些是史有其事的大势，影响会延续若干年（S.era 计数器）。
+   year 对应 S.year（0 = 天启元年）；天启只有七年，之后年份在界面显示为崇祯。 */
+const HIST_EVENTS = [
+  {
+    id: 'h_liaoxiang', span: [1621, 1622], title: '朝局 · 辽饷加派',
+    text: () => '辽东军情急，朝廷议加辽饷：每亩加派九厘。县里贴出告示，里长挨户催缴。',
+    child: (S) => { S.era.liaoxiang = 2; money(-2); },
+    choices: [
+      { label: '照数完纳，不惹事', run: (S) => { S.era.liaoxiang = 3; addStat('德行', 1); return ['你把银子称足交了。里长在册上画了个勾。往后每亩都要多缴几分。']; } },
+      { label: '托人求免（花 6 贯）', req: (S) => S.money >= 6,
+        run: (S) => { money(-6); S.era.liaoxiang = 1; addStat('名声', -1); return ['你托了书办，把名下田亩报少了两成。省下的比送出去的多。']; } },
+      { label: '硬顶不交', run: (S) => { S.era.liaoxiang = 3; addStat('德行', 3); addStat('名声', -3); S.health -= 2; return ['你当众说这钱不该摊到小民头上。差役来了两趟，你在祠堂前挨了一顿推搡。']; } }
+    ]
+  },
+  {
+    id: 'h_guangning', span: [1622, 1623], title: '朝局 · 广宁之败',
+    text: () => '广宁失守，辽民数十万内徙。流民过境，村口挤满了拖家带口的人，官仓早已见底。',
+    choices: [
+      { label: '开仓施粥', req: (S) => S.money >= 4,
+        run: (S) => { money(-4); addStat('德行', 6); addStat('名声', 5); return ['你在村口支起两口大锅，粥稀得能照见人影，到底救活了几十口。']; } },
+      { label: '招几家做佃户', run: (S) => { if (S.land >= 5) { S.land += 0; S.fame += 2; } money(2); addStat('名声', 2); return ['你挑了十几口壮实的，安在村东的荒地上。他们跪下来给你磕头。']; } },
+      { label: '闭门，让里长去管', run: (S) => { addStat('德行', -2); return ['你把门闩上，听着外头的哭声过了一夜。']; } }
+    ]
+  },
+  {
+    id: 'h_bailian', span: [1622, 1623], title: '朝局 · 白莲教起事',
+    text: () => '山东白莲教聚众起事，破了几个县。邻县也有人夜里聚在一处烧香，官府正在查。',
+    choices: [
+      { label: '报官，免惹祸上身', run: (S) => { addStat('名声', 2); addStat('德行', -1); return ['你把听来的名字报给了巡检司。那几个人当夜就被锁走了。']; } },
+      { label: '暗中接济乡勇', req: (S) => S.money >= 5,
+        run: (S) => { money(-5); addStat('德行', 4); S.era.war = 1; return ['你出钱给乡勇置了兵器。此后几年，县里都不太平。']; } },
+      { label: '不闻不问', run: () => ['你照旧下地。教民与官军的动静，离你家还有三十里。'] }
+    ]
+  },
+  {
+    id: 'h_donglin', span: [1624, 1625], title: '朝局 · 东林党狱',
+    text: () => '京里拿问东林诸公，诏狱里死了人。县学里议论纷纷，有人说该上书，有人说闭嘴保命。',
+    cond: (S) => S.rank >= 2 || S.path === 'study',
+    choices: [
+      { label: '联名上书', run: (S) => { addStat('名声', 8); addStat('德行', 4); S.era.purge = 2; return ['你在呈文上按了手印。此后三年，凡与东林沾边的事，官府都多看两眼。']; } },
+      { label: '闭口不言', run: (S) => { addStat('名声', -2); return ['你把话咽了回去。学堂里再没人提这件事。']; } },
+      { label: '烧掉与他们的书信', run: (S) => { addStat('德行', -3); S.era.purge = 0; return ['你把一匣子信丢进灶膛，看着火舌把名字一个个吃掉。']; } }
+    ]
+  },
+  {
+    id: 'h_shuyuan', span: [1625, 1626], title: '朝局 · 毁天下书院',
+    text: () => '朝廷下令毁天下书院。县里的书院封了门，先生被赶出来，书板堆在院里要烧。',
+    cond: (S) => S.path === 'study' || S.rank >= 1,
+    choices: [
+      { label: '出钱把书板买下来（8 贯）', req: (S) => S.money >= 8,
+        run: (S) => { money(-8); addStat('才智', 5); addStat('名声', 4); S.flags.push('藏书'); return ['你买下几十块书板，藏在自家夹墙里。夜里翻刻，纸墨味满屋。']; } },
+      { label: '另开私塾，收几个蒙童', run: (S) => { addStat('才智', 2); money(2); addStat('名声', 2); return ['书院没了，你在自家堂屋摆开桌凳，来了七个孩子。']; } },
+      { label: '从此不再读书', run: (S) => { S.path = 'work'; addStat('才智', -3); addStat('名声', -2); return ['你把书捆起来塞到床底，第二天扛起锄头下地。']; } }
+    ]
+  },
+  {
+    id: 'h_wanggongchang', span: [1626, 1627], title: '朝局 · 王恭厂之变',
+    text: () => '京师王恭厂火药局炸了，声震百里，死伤无数。谣言说天要变了，各地都在囤粮。',
+    choices: [
+      { label: '捐钱赈济（10 贯）', req: (S) => S.money >= 10,
+        run: (S) => { money(-10); addStat('德行', 8); addStat('名声', 6); return ['你把十贯钱交给县里，说是给京里遇难人家的。知县亲手写了你的名字。']; } },
+      { label: '趁乱囤粮', run: (S) => { S.goods.mi = (S.goods.mi || 0) + 6; money(-12); addStat('德行', -4); S.era.famine = 1; return ['你趁乱吃了六石米，等价钱涨起来再卖。旁人的眼神不太对。']; } },
+      { label: '关门不出，静观其变', run: () => ['你把门关上，听人说了一阵，终究不知道该信哪一句。'] }
+    ]
+  },
+  {
+    id: 'h_ningyuan', span: [1626, 1627], title: '朝局 · 宁远之战',
+    text: () => '宁远城下打了一场硬仗，红衣大炮轰退了后金。朝廷征调各地军丁赴援。',
+    cond: (S) => S.trade === 'jun' || S.household === '军户' || S.office.granted,
+    choices: [
+      { label: '应调赴援', run: (S) => { S.mil.merit += 40; S.health -= 8; addStat('名声', 5); addStat('德行', 3); return ['你随军北上，在城下守了四十天。回来时甲上还留着箭孔。']; } },
+      { label: '使钱雇人代役', req: (S) => S.money >= 6,
+        run: (S) => { money(-6); addStat('名声', -2); return ['你花了六贯，让同村的壮丁顶了你的名字。']; } },
+      { label: '称病不去', run: (S) => { addStat('名声', -4); addStat('德行', -2); return ['你躺在床上装了半个月的病。里长骂了几句，终究没再逼。']; } }
+    ]
+  },
+  {
+    id: 'h_famine1626', span: [1626, 1627], title: '天时 · 小冰期大旱',
+    text: () => '连年大旱，河渠断流，蝗虫过境时天都黑了。粮价一日三涨，乡里开始卖儿卖女。',
+    child: (S) => { S.era.famine = 1; S.health -= 3; },
+    choices: [
+      { label: '卖田换粮，保命要紧', req: (S) => S.land >= 3,
+        run: (S) => { const sell = Math.min(S.land, 6); S.land -= sell; money(sell * 6); S.era.famine = 2; return [`你把 ${sell} 亩田贱价卖了，换回几石粮。地契画押时，手有点抖。`]; } },
+      { label: '靠仓里的存粮硬熬', run: (S) => { if ((S.goods.mi || 0) >= 4) { S.goods.mi -= 4; S.era.famine = 1; return ['你把仓底的米一升一升量着吃，熬过了这个冬天。']; } S.health -= 12; S.era.famine = 2; return ['仓里早就空了，一家人挖草根、剥树皮。你瘦得脱了形。']; } },
+      { label: '逃荒去', run: (S) => { S.health -= 8; addStat('名声', -3); S.era.famine = 2; return ['你锁了门，挑着担子往南走。走出三十里，回头看了一眼村子。']; } }
+    ]
+  },
+  {
+    id: 'h_minbian', span: [1627, 1628], title: '朝局 · 陕右民变',
+    text: () => '陕西澄城，饥民杀了知县，聚众为乱。消息传到这里，县里连夜点了乡兵守城门。',
+    choices: [
+      { label: '助官府守城（出 5 贯）', req: (S) => S.money >= 5,
+        run: (S) => { money(-5); addStat('名声', 4); addStat('德行', 2); S.era.war = 2; return ['你出钱置了灯笼火把，夜里在城头守了半个月。']; } },
+      { label: '筑堡自守', req: (S) => S.money >= 20,
+        run: (S) => { money(-20); addStat('名声', 3); S.era.war = 1; return ['你在村后土坡上筑了个小堡，四面挖了壕。邻村的人都来依附。']; } },
+      { label: '暗中与乱民通声气', run: (S) => { money(6); addStat('德行', -8); addStat('名声', -5); if (!S.flags.includes('污点')) S.flags.push('污点'); S.era.war = 2; return ['有人夜里叩门，留下六贯钱和一句话：往后官军来时，递个信。']; } }
+    ]
+  },
+  {
+    id: 'h_caiyi', span: [1628, 1629], title: '朝局 · 裁革驿递',
+    text: () => '新君即位，裁革天下驿递以省费。驿卒失了饭碗，路上多了许多闲汉。',
+    cond: (S) => true,
+    choices: [
+      { label: '收留两个驿卒做长工（4 贯）', req: (S) => S.money >= 4,
+        run: (S) => { money(-4); addStat('德行', 4); S.era.war = 1; return ['两个汉子跪在院里，说只要有口饭吃，什么都肯干。他们力气真大。']; } },
+      { label: '关门不理', run: (S) => { S.era.war = 2; return ['你听见外头有人骂了一句，脚步远了。此后路上不太平。']; } }
+    ]
+  },
+  {
+    id: 'h_juanxiang', span: [1631, 1634], title: '朝局 · 剿饷再派',
+    text: () => '流寇越剿越多，朝廷再派剿饷。县里摊下来的数目，比辽饷还重。',
+    choices: [
+      { label: '照纳', run: (S) => { S.era.liaoxiang = Math.max(S.era.liaoxiang, 4); return ['你又一次把银子称足。册子上的红圈一个接一个。']; } },
+      { label: '报田荒求减', req: (S) => S.rank >= 2,
+        run: (S) => { S.era.liaoxiang = Math.max(S.era.liaoxiang, 2); addStat('名声', 2); return ['你以有功名为由具呈报荒，知县批了「酌减」二字。']; } },
+      { label: '抗缴', run: (S) => { S.era.liaoxiang = 4; addStat('德行', 3); addStat('名声', -4); return ['你带着几家佃户去县衙前跪了半日，被差役用水火棍驱散。']; } }
+    ]
+  },
+  {
+    id: 'h_wokou', span: [1553, 1556], title: '朝局 · 倭寇犯境',
+    text: () => '倭寇沿海登陆，一路焚掠。卫所兵久不习战，县城戒严，乡里自组乡勇。',
+    choices: [
+      { label: '出钱助乡勇守村（6 贯）', req: (S) => S.money >= 6,
+        run: (S) => { money(-6); addStat('名声', 4); addStat('德行', 3); S.era.war = 1; return ['你在祠堂前捐了六贯，村口竖起了木栅。']; } },
+      { label: '举家避入山中', run: (S) => { S.health -= 4; S.era.war = 1; return ['你在山里躲了两个月，回来时田里的稻子已经被踩平了。']; } },
+      { label: '照旧过日子', run: (S) => { S.era.war = 2; return ['你没走，也没防。运气不好的话，这一带总有人要遭殃。']; } }
+    ]
+  },
+  {
+    id: 'h_kaiguan', span: [1567, 1570], title: '朝局 · 隆庆开关',
+    text: () => '朝廷开了海禁，准贩东西二洋。月港的商船一下子多了起来，白银从海上流进来。',
+    choices: [
+      { label: '凑本钱跟一趟船（10 贯）', req: (S) => S.money >= 10,
+        run: (S) => { const win = Math.random() < 0.65; money(win ? 18 : -6); addStat('气运', win ? 2 : -2); return [win ? '船回来时，你分到一包银子，比种三年田还多。' : '船在海上遇了风，本钱折了大半。']; } },
+      { label: '做点海货小买卖（3 贯）', req: (S) => S.money >= 3,
+        run: (S) => { money(-3); money(5); return ['你在镇上摆了个摊，卖胡椒、苏木，一年下来赚了几个钱。']; } },
+      { label: '不涉海，照旧种田', run: () => ['你听人说海上发财，也听人说船翻人亡。梯田里的活计不会骗人。'] }
+    ]
+  },
+  {
+    id: 'h_chaoxian', span: [1592, 1593], title: '朝局 · 朝鲜之役',
+    text: () => '倭兵入朝鲜，朝廷发兵援救。辽东、山东征调粮饷，县里又摊了一笔。',
+    choices: [
+      { label: '应征入伍', run: (S) => { S.mil.merit += 30; S.health -= 10; addStat('名声', 5); S.era.war = 2; return ['你随军过了鸭绿江，在雪地里埋了半年。回来时少了两根手指。']; } },
+      { label: '出粮助饷（8 贯）', req: (S) => S.money >= 8,
+        run: (S) => { money(-8); addStat('名声', 3); addStat('德行', 2); S.era.liaoxiang = Math.max(S.era.liaoxiang || 0, 1); return ['你把八贯钱交到县仓，换了张「急公好义」的帖。']; } },
+      { label: '花钱免役（5 贯）', req: (S) => S.money >= 5,
+        run: (S) => { money(-5); addStat('名声', -2); return ['你使了五贯钱，名字从征丁册上抹了。']; } }
+    ]
+  },
+  {
+    id: 'h_kuangshui', span: [1596, 1605], title: '朝局 · 矿监税使',
+    text: () => '朝廷遣太监下去开矿征税，爪牙四出，指人为矿、指屋为税。县里商户关门了一半。',
+    choices: [
+      { label: '交钱了事（6 贯）', req: (S) => S.money >= 6,
+        run: (S) => { money(-6); return ['你交了六贯，税监的人才转身往下一家去。']; } },
+      { label: '带头抗税', run: (S) => { addStat('名声', 6); addStat('德行', 4); S.health -= 5; money(-2); if (!S.flags.includes('污点')) S.flags.push('骨鲠'); return ['你带着街坊把税监的人围在庙前，闹到府里才散。往后几年，官府看你的眼神不一样了。']; } },
+      { label: '关门避祸，暗里使钱', run: (S) => { money(-3); addStat('名声', -1); return ['你把铺子的招牌摘了，托人送了三贯钱过去。']; } }
+    ]
+  },
+  {
+    id: 'h_sarhu', span: [1618, 1620], title: '朝局 · 萨尔浒之败',
+    text: () => '辽东四路大军覆没，京师大震。朝廷议加辽饷，每亩三厘半，天下始苦。',
+    choices: [
+      { label: '照纳', run: (S) => { S.era.liaoxiang = Math.max(S.era.liaoxiang || 0, 2); return ['告示贴到村口，你按亩数交了银子。这只是开头。']; } },
+      { label: '变卖浮财先备着', run: (S) => { money(4); S.land = Math.max(0, S.land - 1); return ['你卖了一亩薄田，把银子缝进被褥里。往后几年，这钱救了急。']; } }
+    ]
+  },
+  {
+    id: 'h_lianxiang', span: [1637, 1640], title: '朝局 · 练饷加派',
+    text: () => '辽东未平，流寇又起，朝廷再派练饷。三饷并征，亩上加到一分有余，乡里逃户过半。',
+    choices: [
+      { label: '照纳', run: (S) => { S.era.liaoxiang = Math.max(S.era.liaoxiang, 5); addStat('德行', 1); return ['你把最后一笔银子交上去，田契押在柜底，不敢再看。']; } },
+      { label: '弃田逃走', req: (S) => S.land >= 3,
+        run: (S) => { S.land = Math.round(S.land * 0.4); S.era.liaoxiang = 5; S.era.war = 2; addStat('名声', -4); return ['你把大半田亩抛下，带着家小往南走。地就这样荒了。']; } },
+      { label: '与里长合谋报绝户', run: (S) => { money(-8); S.era.liaoxiang = 2; addStat('德行', -3); return ['你送了里长八贯，册子上你这一户成了「绝」。']; } }
+    ]
+  },
+  {
+    id: 'h_plague1640', span: [1640, 1643], title: '天时 · 华北鼠疫',
+    text: () => '大疫流行，一村一村地死人。城里白天也能看见抬棺的，药材涨到十倍。',
+    choices: [
+      { label: '闭门避疫，日用从俭', run: (S) => { S.era.famine = Math.max(S.era.famine, 2); S.health -= 6; return ['门窗紧闭，柴米都托人送到门口。熬了两年，家里死了一个远亲。']; } },
+      { label: '出钱施药（12 贯）', req: (S) => S.money >= 12,
+        run: (S) => { money(-12); addStat('德行', 10); addStat('名声', 8); S.health -= 10; return ['你在巷口支起药锅，自己也病了一场，好歹活了下来。']; } },
+      { label: '举家迁往乡下', run: (S) => { money(-6); S.health -= 3; S.era.famine = 1; return ['你把城里的房子锁了，全家搬到乡下亲戚家挤着住。']; } }
+    ]
+  },
+  {
+    id: 'h_jiashen', span: [1644, 1645], title: '鼎革 · 甲申之变',
+    text: () => '三月，京师陷了，皇帝死在煤山。四月，清兵入关。县里换了旗号，谁也说不清往后是什么世道。',
+    child: (S) => { S.era.war = 3; money(-Math.round(S.money * 0.2)); },
+    choices: [
+      { label: '闭门守家，不问谁坐天下', run: (S) => { S.era.war = 3; money(-Math.round(S.money * 0.2)); addStat('名声', -2); return ['你把门关上，听着外头马蹄声来去。家里的银子被索去了两成。']; } },
+      { label: '出粮犒军，求个安生', req: (S) => S.money >= 10,
+        run: (S) => { money(-10); S.era.war = 2; addStat('名声', 3); return ['你抬了十贯钱和几石米去营里，领兵的收了，写了张告示贴在你家门上。']; } },
+      { label: '南下避乱', run: (S) => { S.land = Math.round(S.land * 0.5); money(-8); S.era.war = 2; addStat('德行', 1); return ['你变卖了半数田产，带着一家老小往南边去。走的时候没敢回头。']; } }
+    ]
+  }
+];
+
+/* ================= 明代纪年表（洪武—崇祯，含建文、洪熙、景泰、天顺） ================= */
+const REIGNS = [
+  { from: 1368, to: 1398, name: '洪武', base: 1367 },
+  { from: 1399, to: 1402, name: '建文', base: 1398 },
+  { from: 1403, to: 1424, name: '永乐', base: 1402 },
+  { from: 1425, to: 1425, name: '洪熙', base: 1424 },
+  { from: 1426, to: 1435, name: '宣德', base: 1425 },
+  { from: 1436, to: 1449, name: '正统', base: 1435 },
+  { from: 1450, to: 1456, name: '景泰', base: 1449 },
+  { from: 1457, to: 1464, name: '天顺', base: 1456 },
+  { from: 1465, to: 1487, name: '成化', base: 1464 },
+  { from: 1488, to: 1505, name: '弘治', base: 1487 },
+  { from: 1506, to: 1521, name: '正德', base: 1505 },
+  { from: 1522, to: 1566, name: '嘉靖', base: 1521 },
+  { from: 1567, to: 1572, name: '隆庆', base: 1566 },
+  { from: 1573, to: 1620, name: '万历', base: 1572 },
+  { from: 1621, to: 1627, name: '天启', base: 1620 },
+  { from: 1628, to: 1644, name: '崇祯', base: 1627 },
+  { from: 1645, to: 1661, name: '顺治', base: 1643 }
+];
+
+function reignOf(y) {
+  const r = REIGNS.find(x => y >= x.from && y <= x.to);
+  return r ? `${r.name} ${y - r.base} 年` : `${y} 年`;
+}
+
+/* ================= 朝局年表 · 前期（洪武—正德） ================= */
+HIST_EVENTS.push(
+  {
+    id: 'h_huangce', span: [1381, 1383], title: '朝局 · 攒造黄册',
+    text: () => '朝廷命天下攒造黄册、编定里甲。户帖上写明田亩、丁口，里长挨家核对，错一个数就要重填。',
+    choices: [
+      { label: '照实报，一分不瞒', run: (S) => { addStat('德行', 3); addStat('名声', 2); return ['你在户帖上按了手印，田亩丁口一条不差。']; } },
+      { label: '少报两亩，求个轻省（送里长 2 贯）', req: (S) => S.money >= 2,
+        run: (S) => { money(-2); S.era.liaoxiang = Math.max(S.era.liaoxiang || 0, 1); addStat('德行', -2); return ['里长收了钱，把两亩薄田写到了绝户名下。']; } },
+      { label: '托病不露面', run: (S) => { addStat('名声', -3); return ['你躲了两天，册子上照样有你这一户，只是被画了个圈。']; } }
+    ]
+  },
+  {
+    id: 'h_yimin', span: [1370, 1373], title: '朝局 · 迁民屯田',
+    text: () => '官府贴出告示：狭乡之民迁往宽乡垦荒，给田给种，免赋三年。里长问你家去不去。',
+    child: (S) => { S.land += 4; S.health -= 2; },
+    choices: [
+      { label: '应募迁去，领荒田二十亩', run: (S) => { S.land += 12; money(-2); addStat('体魄', 4); S.health -= 4; return ['一家人挑着担子走了半个月，在荒地上搭起窝棚。头一年苦，往后是自己的田。']; } },
+      { label: '留在原籍，租种别人的地', run: (S) => { money(1); addStat('名声', -1); return ['你没走。地少人多，租子一年比一年重。']; } },
+      { label: '送钱求免迁（4 贯）', req: (S) => S.money >= 4,
+        run: (S) => { money(-4); return ['你把四贯钱塞给书办，名字从迁民册上划掉了。']; } }
+    ]
+  },
+  {
+    id: 'h_guohuan', span: [1385, 1393], title: '朝局 · 追赃',
+    text: () => '户部钱粮亏空，朝廷遣官追赃。凡管过粮仓、税课的，一律追赔，牵连甚广。',
+    choices: [
+      { label: '倾家完赃，只求脱身', req: (S) => S.money >= 6,
+        run: (S) => { money(-6); addStat('名声', -1); return ['你把攒了几年的银子全填了进去，才换回一张「已完」的批。']; } },
+      { label: '硬扛不认', run: (S) => { S.health -= 6; addStat('德行', 3); addStat('名声', 2); return ['你被锁在县仓里问了三日，口供一个字没改。']; } },
+      { label: '远走避祸', run: (S) => { money(-3); addStat('名声', -3); S.land = Math.max(0, S.land - 2); return ['你连夜出城，田也顾不上了。半年后才敢回来。']; } }
+    ]
+  },
+  {
+    id: 'h_jingnan', span: [1399, 1402], title: '朝局 · 靖难之役',
+    text: () => '燕王起兵「靖难」，南北打了三年。官军过境征粮征夫，县里今日属南，明日属北。',
+    choices: [
+      { label: '献粮犒军，两不得罪', req: (S) => S.money >= 5,
+        run: (S) => { money(-5); S.era.war = 2; addStat('名声', 2); return ['哪一路兵来，你都抬几石米出去，只求不进城。']; } },
+      { label: '举家入山避兵', run: (S) => { S.health -= 5; S.era.war = 2; return ['你在山里住了半年，回来时屋梁被人拆去当了柴。']; } },
+      { label: '投军博个出身', run: (S) => { S.mil.merit += 35; S.health -= 12; S.era.war = 3; addStat('名声', 3); return ['你跟着大军打了两年仗，见过城破，也见过屠。']; } }
+    ]
+  },
+  {
+    id: 'h_xiaxiyang', span: [1405, 1411], title: '朝局 · 宝船下西洋',
+    text: () => '朝廷遣宝船下西洋，江南各府采办桐油、铁钉、绸缎，匠户被点去船厂当差。',
+    choices: [
+      { label: '应募去船厂做活', run: (S) => { money(6); S.health -= 6; grow(S, '匠艺', 8); return ['你在龙江船厂敲了两年铁钉，学会了看图纸。']; } },
+      { label: '出钱代役（5 贯）', req: (S) => S.money >= 5,
+        run: (S) => { money(-5); return ['你花钱雇了个替身，自己留在家里种地。']; } },
+      { label: '跟着船队出海', run: (S) => { money(10); S.health -= 10; addStat('气运', 4); return ['你在船上做杂役，见到过没见过的海和没见过的货。回来时人瘦了一圈。']; } }
+    ]
+  },
+  {
+    id: 'h_yingjian', span: [1417, 1421], title: '朝局 · 营建北京',
+    text: () => '朝廷大修北京宫殿，采木于川广，采石于房山。州县摊派夫役，一去就是一年半载。',
+    choices: [
+      { label: '应夫役（免一年赋）', run: (S) => { S.health -= 12; S.era.liaoxiang = Math.max(0, (S.era.liaoxiang || 0) - 1); addStat('体魄', 3); return ['你在山里抬了十个月的大木，肩膀磨出厚茧。']; } },
+      { label: '出银代役（8 贯）', req: (S) => S.money >= 8,
+        run: (S) => { money(-8); return ['你把银子交了，夫役册上没有你的名字。']; } },
+      { label: '逃役', run: (S) => { addStat('名声', -4); S.era.war = 1; return ['你躲到外县亲戚家，官府的人来问过两回。']; } }
+    ]
+  },
+  {
+    id: 'h_tangsai', span: [1420, 1421], title: '朝局 · 唐赛儿起事',
+    text: () => '山东蒲台唐赛儿聚众起事，攻破州县。官军进剿，乡里被反复搜过几遍。',
+    choices: [
+      { label: '结寨自守', req: (S) => S.money >= 8,
+        run: (S) => { money(-8); addStat('名声', 3); S.era.war = 1; return ['你在村后土岗上筑了寨，青壮轮流守夜。']; } },
+      { label: '报官求兵', run: (S) => { addStat('名声', 1); S.era.war = 2; return ['官军来了，乱是平了，粮也被吃光。']; } },
+      { label: '闭门不出', run: (S) => { S.health -= 4; S.era.war = 2; return ['你把门堵上，听着外头的动静过了两个月。']; } }
+    ]
+  },
+  {
+    id: 'h_renxuan', span: [1426, 1435], title: '朝局 · 轻徭薄赋',
+    text: () => '新君即位，下诏减苏松重赋、招抚流民。县里贴了减免的告示，里长也说今年宽些。',
+    choices: [
+      { label: '招回流民，开垦荒田', run: (S) => { S.land += 6; addStat('德行', 4); addStat('名声', 3); return ['你收留了几户流民，把荒了多年的坡地重新开出来。']; } },
+      { label: '趁宽年多置几亩', req: (S) => S.money >= 18,
+        run: (S) => { money(-18); S.land += 8; return ['地价正低，你一口气添了八亩。']; } },
+      { label: '安分过几年好日子', run: (S) => { money(3); S.health += 4; return ['这几年赋轻，仓里第一次有了余粮。']; } }
+    ]
+  },
+  {
+    id: 'h_jinhua', span: [1436, 1441], title: '朝局 · 金花银',
+    text: () => '朝廷令南方田赋折银解京，称「金花银」。从此纳税要用银子，乡下人得先拿粮去换。',
+    choices: [
+      { label: '早早兑好银子备着', run: (S) => { money(-3); addStat('才智', 2); return ['你趁粮价好时把粮卖了，兑成碎银收在匣里。']; } },
+      { label: '等临期再换', run: (S) => { money(-6); return ['到期限时银贵粮贱，你多花了几贯才凑齐。']; } },
+      { label: '求里长通融，仍纳粮', run: (S) => { money(-2); addStat('名声', -1); return ['里长收了你两贯「折耗」，答应替你周旋。']; } }
+    ]
+  },
+  {
+    id: 'h_tumu', span: [1449, 1450], title: '朝局 · 土木之变',
+    text: () => '御驾亲征，全军覆没于土木堡，天子被掳。京师大震，各地征勤王之兵。',
+    choices: [
+      { label: '应募勤王', run: (S) => { S.mil.merit += 40; S.health -= 10; addStat('名声', 5); S.era.war = 2; return ['你随军赶到京师，在城下守了一冬。']; } },
+      { label: '出粮助饷（8 贯）', req: (S) => S.money >= 8,
+        run: (S) => { money(-8); addStat('名声', 3); S.era.war = 1; return ['你把八贯钱交到县仓，换来一句「忠义可嘉」。']; } },
+      { label: '举家南避', run: (S) => { money(-5); S.era.war = 2; addStat('名声', -2); return ['你带着家小往南走了三百里，等风声过了才回。']; } }
+    ]
+  },
+  {
+    id: 'h_duomen', span: [1457, 1458], title: '朝局 · 夺门之变',
+    text: () => '一夜之间，宫城换了主人。前朝旧臣下狱的、起复的，一天里换了一批。',
+    choices: [
+      { label: '烧掉与旧官府的往来文书', run: (S) => { addStat('德行', -2); return ['你把一匣子呈文丢进灶膛，看着纸灰飞起来。']; } },
+      { label: '照旧过日子，谁也不攀', run: (S) => { addStat('名声', 1); return ['换谁坐殿上，田还是那块田。']; } }
+    ]
+  },
+  {
+    id: 'h_jingxiang', span: [1465, 1476], title: '朝局 · 荆襄流民',
+    text: () => '荆襄山中聚了数十万流民，官府要驱赶回籍，流民据险自守，几次用兵。',
+    choices: [
+      { label: '招几户流民做佃客', run: (S) => { S.land += 4; addStat('德行', 3); money(2); return ['你在山脚下安置了几户，他们开荒，你收租。']; } },
+      { label: '报官领赏', run: (S) => { money(4); addStat('德行', -4); addStat('名声', -2); return ['你把山里的窝棚位置报给了巡检司，领了几贯赏钱。']; } },
+      { label: '不闻不问', run: () => ['山里的事离你远。你只听说又打了一仗。'] }
+    ]
+  },
+  {
+    id: 'h_liujin', span: [1506, 1510], title: '朝局 · 刘瑾用事',
+    text: () => '司礼监刘瑾当权，各处镇守太监横行，凡入京朝觐的官，都要送一份「常例」。',
+    choices: [
+      { label: '照例送上（6 贯）', req: (S) => S.money >= 6,
+        run: (S) => { money(-6); addStat('名声', -1); return ['你把六贯钱封好送去，心里骂了一句。']; } },
+      { label: '不送，硬顶着', run: (S) => { addStat('德行', 4); addStat('名声', 3); S.health -= 4; return ['你没送。后来差役来查了两次账，都被你搪塞过去。']; } },
+      { label: '托人递话求免', req: (S) => S.money >= 3,
+        run: (S) => { money(-3); return ['你托京里的旧识说了句话，那份常例免了。']; } }
+    ]
+  },
+  {
+    id: 'h_ningwang', span: [1519, 1520], title: '朝局 · 宁王之乱',
+    text: () => '宁王在南昌起兵，沿江东下。州县望风而降，也有人说不过旬月就要平。',
+    choices: [
+      { label: '闭城自守，等官军', run: (S) => { S.era.war = 2; addStat('名声', 2); return ['你把粮草收进城里，青壮上城轮守。']; } },
+      { label: '先输诚于宁王，留后路', run: (S) => { money(5); addStat('德行', -5); if (!S.flags.includes('污点')) S.flags.push('污点'); S.era.war = 2; return ['你送了一份厚礼过去。四十天后宁王败了，这份礼成了把柄。']; } },
+      { label: '举家避往邻县', run: (S) => { money(-4); S.era.war = 1; return ['你带着家小躲到邻县，等消息定了才回来。']; } }
+    ]
+  }
+);
