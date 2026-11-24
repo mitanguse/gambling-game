@@ -393,7 +393,10 @@ function inFocus(a, f) {
 
 function focusYear(name) {
   if (S.over || pendingEvent) return;
-  if (awaitingChoice) return;                              // 正有一桩事没办完
+  if (awaitingChoice) {                                    // 桌上还有事没办完，给个回话
+    scene('先把眼前的事办了', '还有一桩没决断的事摆在面前。处置完了，再谈今年往哪走。');
+    return;
+  }
   document.getElementById('choices').innerHTML = '';       // 残留的旧按钮，清掉再走
   const f = FOCUS.find(x => x.name === name);
   if (!f) return;
@@ -560,7 +563,9 @@ function askStep(title, text, options, after) {
       if (o.disabled) return;
       const res = o.run ? o.run() : null;
       awaitingChoice = false;
-      if (res && res.lines) { res.lines.forEach(l => log(l, res.cls || '')); scene(title, res.lines.join('\n')); }
+      const lines = (res && res.lines) || [];
+      if (lines.length) { lines.forEach(l => log(l, res.cls || '')); scene(title, lines.join('\n')); }
+      else { scene(title, `你选了「${o.label}」。`); }
       box.innerHTML = '';                                   // 选完就清掉，不留残影
       const f = flowAfter; flowAfter = null;
       if (f) f();
@@ -729,7 +734,10 @@ function birthOutcome() {
 
 function endYear() {
   if (S.over || pendingEvent) return;
-  if (awaitingChoice) return;
+  if (awaitingChoice) {
+    scene('先把眼前的事办了', '还有一桩没决断的事摆在面前。处置完了，再谈今年往哪走。');
+    return;
+  }
   document.getElementById('choices').innerHTML = '';
   S.focus = '虚度';
   nextYear();
