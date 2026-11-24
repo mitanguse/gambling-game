@@ -234,3 +234,13 @@ h1{font-size:52px;letter-spacing:.35em;margin:0 0 6px;font-weight:600}
 /* 自动播放按钮 */
 .end-row{gap:10px;flex-wrap:wrap}
 .auto-btn.on{border-color:var(--red);color:var(--red)}
+
+/* 时间流逝条 */
+.timeline{padding:0 2px 10px;margin-bottom:6px}
+.tl-bar{position:relative;height:10px;border-radius:999px;background:rgba(120,96,60,.16);overflow:hidden}
+#tl-fill{display:block;height:100%;width:0;border-radius:999px;background:linear-gradient(90deg,#d8c08a,#b0803c 60%,#8a4b22);transition:width .5s ease}
+#tl-marks{position:absolute;inset:0;pointer-events:none}
+#tl-marks i{position:absolute;top:0;height:100%;width:1px;background:rgba(60,44,28,.28)}
+#tl-marks i.mile{background:rgba(150,40,30,.45);width:2px}
+.tl-caption{display:flex;justify-content:space-between;font-size:12px;color:#6b5b45;margin-top:5px;letter-spacing:.04em}
+#tl-age{color:#8a4b22}

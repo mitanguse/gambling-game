@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>浮生·古代人生</title>
-<link rel="stylesheet" href="style.css?v=20261205">
+<link rel="stylesheet" href="style.css?v=20261206">
 </head>
 <body>
 <div id="app">
@@ -40,6 +40,12 @@
         <span id="hud-health" class="pill">气血 ——</span>
       </div>
     </header>
+
+    <!-- 时间流逝条：一条命从生到死，走到哪里一眼看得见 -->
+    <div class="timeline" id="timeline">
+      <div class="tl-bar"><i id="tl-fill"></i><span id="tl-marks"></span></div>
+      <div class="tl-caption"><span id="tl-year">——</span><span id="tl-age">——</span><span id="tl-end">寿数九十</span></div>
+    </div>
 
     <main class="layout">
       <aside class="panel stats">
@@ -110,10 +116,11 @@
   </section>
 
 </div>
-<script src="data.js?v=20261205"></script>
-<script src="game.js?v=20261205"></script>
+<script src="data.js?v=20261206"></script>
+<script src="game.js?v=20261206"></script>
 </body>
 </html>
+
 
 
 

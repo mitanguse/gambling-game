@@ -76,6 +76,8 @@ const GIVEN_F = ['令仪', '含章', '知微', '月娘', '素心', '静姝'];
 
 function newLife(famId, heir) {
   pendingEvent = null;
+  awaitingChoice = false;
+  flowAfter = null;
   const fam = (famId && typeof famId === 'object') ? famId : (FAMILIES.find(f => f.id === famId) || FAMILIES[0]);
   const gender = Math.random() < 0.52 ? '男' : '女';
   const name = heir && heir.name ? heir.name : pick(SURNAMES) + (gender === '男' ? pick(['砚', '舟', '珩', '澈', '筠', '蔺', '清', '让']) : pick(GIVEN_F));
@@ -176,12 +178,31 @@ function scene(title, body) {
   }
 }
 
+let tlMarksBuilt = false;
+
 function render() {
   if (S.money < 0) S.money = 0;   // 家资不显负数（事件里可能直接扣钱）
   const rn = S.rank >= 4 ? (S.office.granted ? officeName() : '进士') : RANK_NAMES[S.rank];
   document.getElementById('hud-name').textContent = S.name;
   document.getElementById('hud-age').textContent = `${S.age} 岁`;
   document.getElementById('hud-era').textContent = reignOf((S.birthYear || 1590) + S.age);
+
+  // 时间流逝条
+  const tlFill = document.getElementById('tl-fill');
+  if (tlFill) {
+    const SPAN = 80;
+    tlFill.style.width = Math.min(100, Math.round((S.age / SPAN) * 100)) + '%';
+    const marksEl = document.getElementById('tl-marks');
+    if (marksEl && !tlMarksBuilt) {
+      marksEl.innerHTML = MILESTONES.map(a => `<i class="mile" style="left:${(a / SPAN) * 100}%"></i>`).join('') +
+        [10, 20, 40, 60, 75].map(a => `<i style="left:${(a / SPAN) * 100}%"></i>`).join('');
+      tlMarksBuilt = true;
+    }
+    const yEl = document.getElementById('tl-year'), aEl = document.getElementById('tl-age'), eEl = document.getElementById('tl-end');
+    if (yEl) yEl.textContent = reignOf((S.birthYear || 1590) + S.age);
+    if (aEl) aEl.textContent = `${S.age} 岁`;
+    if (eEl) eEl.textContent = S.over ? '此生已尽' : '寿数八十';
+  }
   document.getElementById('hud-rank').textContent = rn;
   document.getElementById('hud-money').textContent = `家资 ${S.money} 贯`;
   document.getElementById('hud-health').textContent = `气血 ${S.health}`;
@@ -372,7 +393,8 @@ function inFocus(a, f) {
 
 function focusYear(name) {
   if (S.over || pendingEvent) return;
-  if (document.querySelector('#choices .choice')) return;
+  if (awaitingChoice) return;                              // 正有一桩事没办完
+  document.getElementById('choices').innerHTML = '';       // 残留的旧按钮，清掉再走
   const f = FOCUS.find(x => x.name === name);
   if (!f) return;
   const lines = [];
@@ -425,7 +447,7 @@ function renderActions() {
 
   if (document.getElementById('cat-modal').hidden === false) refreshCategory();
 
-  if (!pendingEvent && !document.querySelector('#choices .choice')) {
+  if (!pendingEvent && !awaitingChoice) {
     document.getElementById('choices').innerHTML = '';
   }
 
@@ -520,9 +542,11 @@ function doAction(a) {
 
 /* ---------- 分步流程（说亲、分娩、丧礼） ---------- */
 let flowAfter = null;
+let awaitingChoice = false;      // 真有选择挂在屏幕上，等价于旧版的 DOM 检查
 
 function askStep(title, text, options, after) {
   flowAfter = after || null;
+  awaitingChoice = true;
   const box = document.getElementById('choices');
   box.innerHTML = '';
   document.getElementById('scene-text').innerHTML = `<p><b>${title}</b></p><p>${text}</p><p class="muted">如何处置？</p>`;
@@ -535,7 +559,9 @@ function askStep(title, text, options, after) {
     b.onclick = () => {
       if (o.disabled) return;
       const res = o.run ? o.run() : null;
+      awaitingChoice = false;
       if (res && res.lines) { res.lines.forEach(l => log(l, res.cls || '')); scene(title, res.lines.join('\n')); }
+      box.innerHTML = '';                                   // 选完就清掉，不留残影
       const f = flowAfter; flowAfter = null;
       if (f) f();
     };
@@ -703,7 +729,8 @@ function birthOutcome() {
 
 function endYear() {
   if (S.over || pendingEvent) return;
-  if (document.querySelector('#choices .choice')) return;
+  if (awaitingChoice) return;
+  document.getElementById('choices').innerHTML = '';
   S.focus = '虚度';
   nextYear();
 }
@@ -789,8 +816,7 @@ function stopAuto(msg) {
 
 function autoTick() {
   if (!S.auto || S.over) { stopAuto(); return; }
-  if (pendingEvent) return;
-  if (document.querySelector('#choices .choice')) return;   // 等玩家决断
+  if (pendingEvent || awaitingChoice) return;   // 等玩家决断
   const f = FOCUS[Math.floor(Math.random() * FOCUS.length)];
   focusYear(f.name);
 }
@@ -833,6 +859,7 @@ function rollEvent() {
 
 function showEvent(e) {
   pendingEvent = e;
+  awaitingChoice = true;
   const box = document.getElementById('choices');
   box.innerHTML = '';
   e.choices.forEach((c, i) => {
@@ -857,6 +884,7 @@ function showEvent(e) {
 
 function resolveEvent(c) {
   if (!pendingEvent) return;
+  awaitingChoice = false;
   const lines = c.run(S) || [];
   lines.forEach(l => log(l, ''));
   pendingEvent = null;
