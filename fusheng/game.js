@@ -1271,7 +1271,7 @@ function openLine() {
   const a = S.age;
   const weak = S.health < 50;
   const poor = S.land === 0 && S.money < 3;
-  const y = `天启 ${S.year + 1} 年，${seasonText()}。`;
+  const y = `${reignOf((S.birthYear || 1590) + S.age)}，${seasonText()}。`;
   if (a <= 12) {
     return pick([
       y + '你又长高了一点，去年的衣裳短了一截。',
